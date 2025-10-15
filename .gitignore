@@ -1,0 +1,96 @@
+# 编译生成文件
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# 静态库和动态库
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# 调试符号
+*.dSYM/
+*.pdb
+
+# CMake 构建目录
+build/
+out/
+bin/
+lib/
+
+# CMake 生成文件
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# 依赖目录
+deps/
+third_party/
+external/
+
+# 项目文件
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.project
+*.cproject
+*.cbp
+*.workspace
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 文档
+doc/html/
+doc/latex/
+
+# 包管理器
+vcpkg/
+conanbuildinfo.*
+conaninfo.txt
+conan.lock
+
+# 临时文件
+*.tmp
+*.temp
+
+# 日志文件
+*.log
+
+# 编译输出
+build/
+*.o
+*.so
+*.dll
+*.exe
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
