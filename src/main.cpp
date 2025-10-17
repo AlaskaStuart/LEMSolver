@@ -202,8 +202,7 @@ SlopeAnalysis::startAnalysis(const MatrixXd_map &
         {
             auto slices_key = slices_stratum.first;
             Eigen::MatrixXd slices_geos = slices_stratum.second;
-            double result = calculateFSMorgensternPrice(slices_geos,
-                                                        stratum_args);
+            double result = calculateFSMorgensternPrice(slices_geos,stratum_args);
             analysis_results[slices_key] = result;
         }
     }
