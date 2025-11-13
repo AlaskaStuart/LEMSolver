@@ -1,9 +1,12 @@
 #ifndef LEMSOLVER_MODEL_H
 #define LEMSOLVER_MODEL_H
 
-#include <nlohmann/json.hpp>
-#include <Eigen/Dense>
+#include <iostream>
+#include <fstream>
 #include <vector>
+#include <string>
+#include <Eigen/Dense>
+#include <nlohmann/json.hpp>
 
 struct Slope{
 
