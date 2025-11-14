@@ -1,67 +1,77 @@
 #include "model.h"
 
-using json = nlohmann::json;
+// ---------- 工具函数：JSON数组 → vector数组 ----------
+static MultiPoints2D json_to_points(const json &arr)
+{
+    MultiPoints2D points;
+    points.reserve(arr.size());
 
-
-// ---------- 工具函数：JSON数组 → Eigen矩阵 ----------
-static Eigen::MatrixX2d json_to_matrix2d(const json& arr) {
-    Eigen::MatrixX2d mat(arr.size(), 2);
-    for (int i = 0; i < arr.size(); ++i) {
-        mat(i, 0) = arr[i][0].get<double>();
-        mat(i, 1) = arr[i][1].get<double>();
+    for (const auto &item : arr)
+    {
+        points.push_back({item[0].get<double>(), item[1].get<double>()});
     }
-    return mat;
+    // sort the polyline by x-axis from small to large
+    if (points.front()[0] > points.back()[0])
+    {
+        std::reverse(points.begin(), points.end());
+    };
+    return points;
 }
 
 // ---------- from_json 定义 ----------
-void from_json(const json& j, Strata& s) {
-    j.at("name").get_to(s.strata_name);
-    j.at("idx").get_to(s.strata_id);
+void from_json(const json &j, Strata &s)
+{
+    j.at("strata_name").get_to(s.strata_name);
+    j.at("strata_idx").get_to(s.strata_idx);
     j.at("density").get_to(s.density);
-    j.at("cohesion").get_to(s.cohension);
-    j.at("phi").get_to(s.friction_angle);
+    j.at("cohesion").get_to(s.cohesion);
+    j.at("friction_angle").get_to(s.friction_angle);
 
-    s.stratum_upper_bound = json_to_matrix2d(j.at("upperBound"));
-    s.stratum_lower_bound = json_to_matrix2d(j.at("lowerBound"));
-
+    s.strata_upper_bound = json_to_points(j.at("strata_upper_bound"));
+    s.strata_lower_bound = json_to_points(j.at("strata_lower_bound"));
 }
 
-void from_json(const json& j, Fault& f) {
+void from_json(const json &j, Fault &f)
+{
 
-    if(j.contains("fault_id")){
+    if (j.contains("fault_id"))
+    {
         j.at("fault_id").get_to(f.fault_id);
     }
     if (j.contains("fault_shape"))
-        f.fault_shape = json_to_matrix2d(j.at("fault_shape"));
+        f.fault_shape = json_to_points(j.at("fault_shape"));
 }
 
-void from_json(const json& j, Slope& s) {
+void from_json(const json &j, Slope &s)
+{
 
-    s.slope_shape = json_to_matrix2d(j.at("slopeShape"));
+    s.slope_shape = json_to_points(j.at("slope_shape"));
 
     // 如果无水位，初始化为空
-    s.water_level = Eigen::MatrixX2d(); 
-    if (j.contains("waterLevel") && !j["waterLevel"].empty())
-        s.water_level = json_to_matrix2d(j["waterLevel"]);
+    s.water_level.clear();
+    if (j.contains("water_level") && !j["water_level"].empty())
+        s.water_level = json_to_points(j["water_level"]);
 
     j.at("stratum").get_to(s.stratum);
+
     if (j.contains("faults"))
         j.at("faults").get_to(s.faults);
 }
 
-// int main() {
+// int main()
+// {
 //     std::cout << "Current path: " << std::filesystem::current_path() << "\n";
 //     std::ifstream f("./data/sectionModel.json");
-//     if (!f.is_open()) {
+//     if (!f.is_open())
+//     {
 //         std::cerr << "Error: cannot open ../../data/sectionModel.json\n";
 //         return -1;
 //     }
 //     nlohmann::json j;
 //     f >> j;
-
 //     Slope slope = j.get<Slope>();
 
-//     std::cout << "Slope points: " << slope.slope_shape.rows() << "\n";
+//     std::cout << "Slope points: " << slope.slope_shape.size() << "\n";
 //     std::cout << "Strata count: " << slope.stratum.size() << "\n";
 //     std::cout << "First stratum name: " << slope.stratum[0].strata_name << "\n";
 // }

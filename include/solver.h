@@ -2,45 +2,93 @@
 #define LEMSOLVER_SLOVER_H
 
 #include "model.h"
+#include "geometry.h"
 
+struct SolverConfig
+{
+    int entry_exit_points_num = 20;
+    int slips_num = 10;
+    int slices_num = 300;
+};
 
-using Arc_slips_map = std::map<std::tuple<int, int,int>,Eigen::Vector3d>;
-using Complex_slips_map = std::map<std::tuple<int, int, int>,Eigen::VectorXd>;
-using Slices_map = std::map<std::tuple<int, int, int>, Eigen::MatrixXd>;
-// using Stratum_map = std::map<int, std::pair<Eigen::MatrixXd, Eigen::MatrixXd>>;
+struct SolverResult
+{
+    // plot elements
+    MultiPoints2D entryRange;
+    MultiPoints2D exitRange;
+    MultiPoints2D entryPointsSet;
+    MultiPoints2D exitPointsSet;
+    // result elements
+    std::vector<float> factorOfSafety;
+    DynamicContainer arcSlipsSet;
+    DynamicContainer slicesGeosSet;
+};
 
-class Solver{
-    private:
+MultiPoints2D setEntryRange(const MultiPoints2D &polyline);
+MultiPoints2D setExitRange(const MultiPoints2D &polyline);
 
-    // calculation parameters
-    int entry_exit_points_num_;
-    int slips_num_;
-    int slices_num_;
+DynamicContainer setSlips(const MultiPoints2D &entryPointsSet,
+                          const MultiPoints2D &exitPointsSet,
+                          const Slope &slope);
 
-    // visiualization variables
-    Eigen::Matrix2d entry_range_;
-    Eigen::Matrix2d exit_range_;
+DynamicContainer setSlicesGeos(const MultiPoints2D &entryPointsSet,
+                               const MultiPoints2D &exitPointsSet,
+                               const DynamicContainer &slipsSet,
+                               const Slope &slope);
 
-    Eigen::MatrixX2d entry_points_set_;
-    Eigen::MatrixX2d exit_points_set_;
+DynamicContainer setSlicesStratum(const DynamicContainer &slipsSet,
+                                  const Slope &slope);
 
-    Arc_slips_map arc_slips_map_;
-    Complex_slips_map complex_slips_map_;
+/*
+class Solver
 
-    Slices_map slices_map_;
+*/
+class Solver
+{
+public:
+    Solver(const SolverConfig &cfg = {},
+           const Slope &slope,
+           std::string methodName = "Ordinary")
+        : cfg_(cfg), slope_(slope)
+    {
+        init();
 
-    // results
-    std::map<std::tuple<int, int,int>,float> analysis_results_;
+        factorOfSafety_ = startAnalysis(methodName);
+    };
 
-    Slices_map generateSlices(const Eigen::MatrixX2d& enPts, const Eigen::MatrixX2d& exPts, const Eigen::MatrixX2d& slpShp,const Arc_slips_map& arcSlipsMap,int slicesNum);
-    Slices_map generateSlices(const Eigen::MatrixX2d& enPts, const Eigen::MatrixX2d& exPts, const Eigen::MatrixX2d& slpShp,const Complex_slips_map& complexSlipsMap,int slicesNum);
+    // 方便画图
+    const MultiPoints2D &getEntryRange() const { return entryRange_; };
+    const MultiPoints2D &getExitRange() const { return exitRange_; };
+    const MultiPoints2D &getEntryPointsSet() const { return entryPointsSet_; };
+    const MultiPoints2D &getExitPointsSet() const { return exitPointsSet_; };
+    // DynamicContainer getArcSlipsSet() const { return slipsSet_; };
+    // DynamicContainer getSlicesGeosSet() const { return slicesGeosSet_; };
+    // DynamicContainer getSlicesStratumSet() const { return slicesStratumSet_; };
+    const SolverResult &getResult() const { return buildResult() };
 
-    public:
-    
+private:
+    SolverConfig cfg_;
+    Slope slope_;
 
+    MultiPoints2D entryRange_;
+    MultiPoints2D exitRange_;
 
+    MultiPoints2D entryPointsSet_;
+    MultiPoints2D exitPointsSet_;
 
+    DynamicContainer slipsSet_;
+    DynamicContainer slicesGeosSet_;
+    DynamicContainer slicesStratumSet_;
 
+    std::vector<float> factorOfSafety_;
+
+    // SolverResult result_;
+
+    // 初始化函数
+    void init();
+    std::vector<float> startAnalysis(std::string method);
+
+    SolverResult buildResult() const;
 };
 
 #endif
