@@ -9,14 +9,20 @@ MultiPoints2D cutFromPolyLine(const MultiPoints2D &polyline,
 
 MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints);
 
-double calculateCircumToChordDist(double chordLength, double chordAngle);
+// double calculateCircumToChordDist(double chordLength, double chordAngle);
 
-double calculateRadiusFromChordAndCircum(double chordLength, double circumToChord);
+double getRadiusByChordCircum(double chordLength, double circumToChord);
 
 bool isLineIntersectedCircle(const MultiPoints2D &polyline,
                              const std::array<double, 2> &center,
                              double radius);
 
 // double calculateAreaOfQuad(const MultiPoints2D &pts);
+
+int intersectionNum(const MultiPoints2D &polyline,
+                    const std::array<double, 2> &center,
+                    double radius);
+
+double getYbyX(const MultiPoints2D &polyline, double x);
 
 #endif

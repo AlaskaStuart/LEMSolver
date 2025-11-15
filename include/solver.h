@@ -1,23 +1,30 @@
 #ifndef LEMSOLVER_SLOVER_H
 #define LEMSOLVER_SLOVER_H
 
+#include "model.h"
 #include "algorithm.h"
 
 /*
-class Solver
+args:
+- cfg: 计算配置文件
+- slope: 斜坡模型
+
+methods:
+- startAnalysis(methodName)
+- getResult()
+
+output:
+- factorOfSafety: 系数安全系数
+-
 
 */
 class Solver
 {
 public:
-    Solver(const SolverConfig &cfg = {},
-           const Slope &slope,
-           std::string methodName = "Ordinary")
-        : cfg_(cfg), slope_(slope)
+    Solver(const Slope &slope, const SolverConfig &cfg = SolverConfig())
+        : slope_(slope), cfg_(cfg)
     {
-        init();
-
-        factorOfSafety_ = startAnalysis(methodName);
+        initialize();
     };
 
     // 方便画图
@@ -28,6 +35,8 @@ public:
     // DynamicContainer getArcSlipsSet() const { return slipsSet_; };
     // DynamicContainer getSlicesGeosSet() const { return slicesGeosSet_; };
     // DynamicContainer getSlicesStratumSet() const { return slicesStratumSet_; };
+
+    void startAnalysis(std::string method = "ordinary");
     const SolverResult &getResult() const { return buildResult(); };
 
 private:
@@ -48,9 +57,7 @@ private:
 
     // SolverResult result_;
 
-    // 初始化函数
-    void init();
-    std::vector<float> startAnalysis(std::string method);
+    void initialize();
 
     SolverResult buildResult() const;
 };

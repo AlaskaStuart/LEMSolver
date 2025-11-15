@@ -9,8 +9,9 @@ MultiPoints2D setExitRange(const MultiPoints2D &polyline);
 
 DynamicContainer setSlips(const MultiPoints2D &entryPointsSet,
                           const MultiPoints2D &exitPointsSet,
+                          const int &numSlips,
                           const Slope &slope);
-// 该怎么做呢
+
 DynamicContainer setSlicesGeos(const MultiPoints2D &entryPointsSet,
                                const MultiPoints2D &exitPointsSet,
                                const DynamicContainer &slipsSet,

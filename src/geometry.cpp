@@ -77,7 +77,7 @@ MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
     result.reserve(numPoints);
     if (polyline.size() < 2)
     {
-        throw std::runtime_error("The number of points is less than 2, cannot operate interpolation");
+        throw std::runtime_error("polyline must have at least two points.");
     }
     else if (polyline.size() == 2)
     {
@@ -97,34 +97,39 @@ MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
         for (int i = 0; i < numPoints; i++)
         {
             double x = polyline.front()[0] + i * dx;
-            for (int j = 0; j < polyline.size() - 1; j++)
+            double y = getYbyX(polyline, x);
+            if (std::isnan(y))
             {
-                if (polyline[j][0] <= x && x <= polyline[j + 1][0])
-                {
-                    double slope = (polyline[j + 1][1] - polyline[j][1]) / (polyline[j + 1][0] - polyline[j][0]);
-                    double y = polyline[j][1] + slope * (x - polyline[j][0]);
-                    result.push_back({x, y});
-                    break;
-                }
+                throw std::runtime_error("the polyline is not monotonic, please check it");
+            }
+            else
+            {
+                result.push_back({x, y});
             }
         }
     }
     return result;
 }
 
-double calculateCircumToChordDist(double chordLength, double chordAngle)
-{
-    double radius = chordLength / (2.0 * std::cos(chordAngle));
-    double circumToChord = std::sqrt(radius * radius - (chordLength / 2.0) * (chordLength / 2.0));
-    return circumToChord;
-}
+// 根据弦长和弦度，计算圆周到弦的距离
+// double calculateCircumToChordDist(double chord, double chordAngle)
+// {
+//     double radius = chord / (2.0 * std::cos(chordAngle));
+//     double chordToCircum = std::sqrt(radius * radius - (chord / 2.0) * (chord / 2.0));
+//     return chordToCircum;
+// }
+// chordToCircum = 2*chord*std::tan(horizontalAngle);
 
-double calculateRadiusFromChordAndCircum(double chordLength, double circumToChord)
+// 圆内任意两个弦AB,CD相交于点O,则
+// AO*BO = CO *DO
+// (2*R-chordToCircum)*chordToCircum = chord/2 * chord/2
+double getRadiusByChordCircum(double chord, double chordToCircum)
 {
-    double radius = (chordLength * chordLength * 0.25 + circumToChord * circumToChord) / (2 * circumToChord);
+    double radius = (chord * chord * 0.25 + chordToCircum * chordToCircum) / (2 * chordToCircum);
     return radius;
 }
 
+// 不包含线段的起始点和终止点，如果存在其他交点，则返回为true
 bool isLineIntersectedCircle(const MultiPoints2D &polyline,
                              const std::array<double, 2> &center,
                              double radius)
@@ -141,6 +146,7 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
         {
             std::array<double, 2> p1 = polyline[plIdx];
             std::array<double, 2> p2 = polyline[plIdx + 1];
+
             std::array<double, 2> dir = {
                 p2[0] - p1[0],
                 p2[1] - p1[1]};
@@ -186,6 +192,96 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
         return isIntersected;
     };
 }
+// 实现原理:
+//  vect_delta = p1 -center
+//  vect_dir = p2 - p1
+//  p1p2上的任意一点p到圆心的向量可表示为: vect_p = t*vect_dir + vect_delta
+//  则p1p2与圆的交点满足: (vect_p-center)^2 = R^2
+//  问题就转换成求解关于t的二元一次方程
+int intersectionNum(const MultiPoints2D &polyline,
+                    const std::array<double, 2> &center,
+                    double radius)
+{
+    int num = 0;
+    int plineSize = polyline.size();
+
+    if (plineSize < 2)
+    {
+        throw std::runtime_error("polyline must have at least two points.");
+    }
+    else
+    {
+        for (int i = 0; i < plineSize - 1; i++)
+        {
+            std::array<double, 2> p1 = polyline[i];
+            std::array<double, 2> p2 = polyline[i + 1];
+            std::array<double, 2> dir = {
+                p2[0] - p1[0],
+                p2[1] - p1[1]};
+
+            // p = p1 + t * dir
+            // ||p - center||^2 = R^2
+            std::array<double, 2> delta = {
+                p1[0] - center[0],
+                p1[1] - center[1]};
+
+            // a = |dir|^2
+            // b = 2 * (dir * delta)
+            // c = delta * delta - R^2
+            double a = dir[0] * dir[0] + dir[1] * dir[1];
+            double b = 2 * (dir[0] * delta[0] + dir[1] * delta[1]);
+            double c = delta[0] * delta[0] + delta[1] * delta[1] - radius * radius;
+
+            // 解二次方程 a*t² + b*t + c = 0
+            double discriminant = b * b - 4 * a * c;
+
+            std::vector<double> t_values;
+
+            if (discriminant > EPSILON)
+            {
+                double t1 = (-b + std::sqrt(discriminant)) / (2 * a);
+                double t2 = (-b - std::sqrt(discriminant)) / (2 * a);
+                t_values.push_back(t1);
+                t_values.push_back(t2);
+            }
+            else if (abs(discriminant) <= EPSILON)
+            {
+                double t = -b / (2 * a);
+                t_values.push_back(t);
+            }
+            else
+            {
+                continue;
+            }
+            auto unique_end = std::unique(t_values.begin(), t_values.end(), [&](double x, double y)
+                                          { return std::abs(x - y) < EPSILON; });
+            t_values.erase(unique_end, t_values.end());
+            for (double t : t_values)
+            {
+                // Only count intersections strictly inside the segment
+                if (t > EPSILON && t < 1.0 - EPSILON)
+                {
+                    num++;
+                }
+                // 只记t=0, 不计t=1,除非是多线段的终点
+                // t near 0 or 1 → boundary case
+                else if (t >= -EPSILON && t <= EPSILON)
+                {
+                    // avoid double count: count only if i==0
+                    num++;
+                }
+                else if (t >= 1.0 - EPSILON && t <= 1.0 + EPSILON)
+                {
+                    // avoid double count: count only if it's NOT the start of next segment
+                    // Next segment start index is i+1, so only count here if this is last segment
+                    if (i == plineSize - 2)
+                        num++;
+                }
+            }
+        }
+        return num;
+    }
+}
 
 // double calculateAreaOfQuad(const MultiPoints2D &pts)
 // {
@@ -211,6 +307,32 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
 
 //     return std::abs(sum) / 2.0;
 // }
+
+double getYbyX(const MultiPoints2D &polyline, double x)
+{
+    double result = std::nan(""); // 初始化为NaN
+    int plineSize = polyline.size();
+
+    if (plineSize < 2)
+    {
+        throw std::runtime_error("polyline must have at least two points.");
+    }
+    else
+    {
+        for (int i = 0; i < plineSize - 1; i++)
+        {
+            if (x >= polyline[i][0] && x <= polyline[i + 1][0])
+            {
+                // 线性插值
+                double slope = (polyline[i + 1][1] - polyline[i][1]) / (polyline[i + 1][0] - polyline[i][0]);
+                result = polyline[i][1] + slope * (x - polyline[i][0]);
+                break;
+            }
+        }
+    }
+
+    return result;
+}
 
 // int main()
 // {

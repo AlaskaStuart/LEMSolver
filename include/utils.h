@@ -11,6 +11,9 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
+// --------------------常量定义----------------------
+const double EPSILON = 1e-3;
+
 // ------------------命名空间声明--------------------
 
 using json = nlohmann::json;
@@ -23,6 +26,7 @@ using MultiPoints2D = std::vector<std::array<double, 2>>;
 
 // 打印多边形的线条
 void printPolyLine(const MultiPoints2D &poly);
+int getIndexOfLastNonNaN(const DynamicContainer &slice_stratum, int idx = -1);
 
 // -------------------结构体声明---------------------
 
@@ -77,7 +81,6 @@ struct SolverResult
     MultiPoints2D exitRange;
     MultiPoints2D entryPointsSet;
     MultiPoints2D exitPointsSet;
-    // result elements
     std::vector<float> factorOfSafety;
     DynamicContainer arcSlipsSet;
     DynamicContainer slicesGeosSet;
