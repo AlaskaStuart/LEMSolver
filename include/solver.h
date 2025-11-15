@@ -1,43 +1,7 @@
 #ifndef LEMSOLVER_SLOVER_H
 #define LEMSOLVER_SLOVER_H
 
-#include "model.h"
-#include "geometry.h"
-
-struct SolverConfig
-{
-    int entry_exit_points_num = 20;
-    int slips_num = 10;
-    int slices_num = 300;
-};
-
-struct SolverResult
-{
-    // plot elements
-    MultiPoints2D entryRange;
-    MultiPoints2D exitRange;
-    MultiPoints2D entryPointsSet;
-    MultiPoints2D exitPointsSet;
-    // result elements
-    std::vector<float> factorOfSafety;
-    DynamicContainer arcSlipsSet;
-    DynamicContainer slicesGeosSet;
-};
-
-MultiPoints2D setEntryRange(const MultiPoints2D &polyline);
-MultiPoints2D setExitRange(const MultiPoints2D &polyline);
-
-DynamicContainer setSlips(const MultiPoints2D &entryPointsSet,
-                          const MultiPoints2D &exitPointsSet,
-                          const Slope &slope);
-
-DynamicContainer setSlicesGeos(const MultiPoints2D &entryPointsSet,
-                               const MultiPoints2D &exitPointsSet,
-                               const DynamicContainer &slipsSet,
-                               const Slope &slope);
-
-DynamicContainer setSlicesStratum(const DynamicContainer &slipsSet,
-                                  const Slope &slope);
+#include "algorithm.h"
 
 /*
 class Solver
@@ -64,7 +28,7 @@ public:
     // DynamicContainer getArcSlipsSet() const { return slipsSet_; };
     // DynamicContainer getSlicesGeosSet() const { return slicesGeosSet_; };
     // DynamicContainer getSlicesStratumSet() const { return slicesStratumSet_; };
-    const SolverResult &getResult() const { return buildResult() };
+    const SolverResult &getResult() const { return buildResult(); };
 
 private:
     SolverConfig cfg_;

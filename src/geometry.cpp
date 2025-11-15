@@ -212,30 +212,30 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
 //     return std::abs(sum) / 2.0;
 // }
 
-int main()
-{
-    // 定义一个示例折线
-    MultiPoints2D polyline = {
-        {0.0, 0.0},
-        {1.0, 2.0},
-        {2.0, 3.0},
-        {3.0, 5.0},
-        {4.0, 4.0},
-        {5.0, 2.0}};
+// int main()
+// {
+//     // 定义一个示例折线
+//     MultiPoints2D polyline = {
+//         {0.0, 0.0},
+//         {1.0, 2.0},
+//         {2.0, 3.0},
+//         {3.0, 5.0},
+//         {4.0, 4.0},
+//         {5.0, 2.0}};
 
-    std::array<double, 2> startPoint = {1.5, 2.5};
-    std::array<double, 2> endPoint = {4.5, 3.0};
+//     std::array<double, 2> startPoint = {1.5, 2.5};
+//     std::array<double, 2> endPoint = {4.5, 3.0};
 
-    try
-    {
-        MultiPoints2D subLine = cutFromPolyLine(polyline, startPoint, endPoint);
-        std::cout << "Cutted polyline:\n";
-        printPolyLine(subLine);
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Error: " << e.what() << "\n";
-    }
+//     try
+//     {
+//         MultiPoints2D subLine = cutFromPolyLine(polyline, startPoint, endPoint);
+//         std::cout << "Cutted polyline:\n";
+//         printPolyLine(subLine);
+//     }
+//     catch (const std::exception &e)
+//     {
+//         std::cerr << "Error: " << e.what() << "\n";
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

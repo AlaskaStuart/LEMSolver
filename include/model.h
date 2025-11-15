@@ -1,3 +1,5 @@
+// 从json文件中读取界面数据，生成Slope结构体
+
 #ifndef LEMSOLVER_MODEL_H
 #define LEMSOLVER_MODEL_H
 

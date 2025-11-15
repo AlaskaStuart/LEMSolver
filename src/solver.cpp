@@ -1,32 +1,8 @@
 #include "solver.h"
 
-MultiPoints2D setEntryRange(const MultiPoints2D &polyline)
-{
-}
-
-MultiPoints2D setExitRange(const MultiPoints2D &polyline)
-{
-}
-
-DynamicContainer setSlips(const MultiPoints2D &entryPointsSet,
-                          const MultiPoints2D &exitPointsSet,
-                          const Slope &slope)
-{
-}
-
-DynamicContainer setSlicesGeos(const MultiPoints2D &entryPointsSet,
-                               const MultiPoints2D &exitPointsSet,
-                               const DynamicContainer &slipsSet,
-                               const Slope &slope)
-{
-}
-
-DynamicContainer setSlicesStratum(const DynamicContainer &slipsSet,
-                                  const Slope &slope)
-{
-}
 // step-1: 确定破裂面的入口和出口位置
-// step-2:
+// step-2: 插值生成入口点和出口点
+//
 void Solver::init()
 {
     Solver::entryRange_ = setEntryRange(Solver::slope_.slope_shape);
