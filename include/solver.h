@@ -49,9 +49,9 @@ private:
     MultiPoints2D entryPointsSet_;
     MultiPoints2D exitPointsSet_;
 
-    DynamicContainer slipsSet_;
-    DynamicContainer slicesGeosSet_;
-    DynamicContainer slicesStratumSet_;
+    VectorMap slipsSet_;
+    VectorMap slicesGeosSet_;
+    VectorMap slicesStratumSet_;
 
     std::vector<float> factorOfSafety_;
 

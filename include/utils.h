@@ -4,6 +4,7 @@
 #pragma once
 #include <vector>
 #include <array>
+#include <map>
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
@@ -12,7 +13,16 @@
 #include <nlohmann/json.hpp>
 
 // --------------------常量定义----------------------
+
+// 精度
+// 允许误差
 const double EPSILON = 1e-3;
+
+// 滑裂面的入口和出口最大长度
+const double MAX_ENTRY_EXIT_LENGTH = 200;
+
+// 初始圆弧滑面深度，数值越大，圆弧越深
+const double INIT_SLIP_DEPTH_FACTOR = 1.1;
 
 // ------------------命名空间声明--------------------
 
@@ -22,48 +32,54 @@ using json = nlohmann::json;
 using MultiPoints2D = std::vector<std::array<double, 2>>;
 // using MultiPoints3D = std::vector<std::array<double, 3>>;
 
+// 存放可变长度元素的字典
+// 应用场景：复合滑面(每个滑面是多段线，个数不可知)
+// 索引为 (i, j, k), 对应 (破坏点入口编号, 破坏点出口编号, 划裂面编号)
+// 值是一个向量，前三个元素分别为圆弧的圆心和半径(Rx, Ry, R)
+using VectorMap = std::map<std::tuple<int, int, int>, std::vector<double>>;
+
 // --------------------函数声明----------------------
 
 // 打印多边形的线条
 void printPolyLine(const MultiPoints2D &poly);
-int getIndexOfLastNonNaN(const DynamicContainer &slice_stratum, int idx = -1);
+int getIndexOfLastNonNaN(const VectorMap &slice_stratum, int idx = -1);
 
 // -------------------结构体声明---------------------
 
 // 动态数组容器
-struct DynamicContainer
-{
-private:
-    int m_rows, m_cols;
+// struct DynamicContainer
+// {
+// private:
+//     int m_rows, m_cols;
 
-public:
-    std::vector<double> data;
-    DynamicContainer() : m_rows(0), m_cols(0), data() {}
-    DynamicContainer(int r, int c)
-        : m_rows(r), m_cols(c), data(r * c, 0.0)
-    {
-    }
+// public:
+//     std::vector<double> data;
+//     DynamicContainer() : m_rows(0), m_cols(0), data() {}
+//     DynamicContainer(int r, int c)
+//         : m_rows(r), m_cols(c), data(r * c, 0.0)
+//     {
+//     }
 
-    // —— 行列访问器 ——
-    int rows() const { return m_rows; }
-    int cols() const { return m_cols; }
+//     // —— 行列访问器 ——
+//     int rows() const { return m_rows; }
+//     int cols() const { return m_cols; }
 
-    // 返回 (rows, cols)
-    std::pair<int, int> shape() const
-    {
-        return {m_rows, m_cols};
-    }
+//     // 返回 (rows, cols)
+//     std::pair<int, int> shape() const
+//     {
+//         return {m_rows, m_cols};
+//     }
 
-    // —— 元素访问 ——
-    double &operator()(int r, int c)
-    {
-        return data[r * m_cols + c];
-    }
-    const double &operator()(int r, int c) const
-    {
-        return data[r * m_cols + c];
-    }
-};
+//     // —— 元素访问 ——
+//     double &operator()(int r, int c)
+//     {
+//         return data[r * m_cols + c];
+//     }
+//     const double &operator()(int r, int c) const
+//     {
+//         return data[r * m_cols + c];
+//     }
+// };
 
 // 保存极限平衡法计算所用的参数
 struct SolverConfig
@@ -82,8 +98,8 @@ struct SolverResult
     MultiPoints2D entryPointsSet;
     MultiPoints2D exitPointsSet;
     std::vector<float> factorOfSafety;
-    DynamicContainer arcSlipsSet;
-    DynamicContainer slicesGeosSet;
+    VectorMap arcSlipsSet;
+    VectorMap slicesGeosSet;
 };
 
 #endif

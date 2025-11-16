@@ -1,5 +1,14 @@
 #include "geometry.h"
 
+const std::array<double, 2> &getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint)
+{
+    return {0.5 * (entryPoint[0] + exitPoint[0]), 0.5 * (entryPoint[1] + exitPoint[1])};
+}
+
+double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &entryPoint)
+{
+    return std::sqrt(std::pow(exitPoint[0] - entryPoint[0], 2) + std::pow(exitPoint[1] - entryPoint[1], 2));
+}
 // 根据指定的起始点和终止点截取折线段, 需要以指定的起始点开始, 指定的终止点结束
 // 实现过程:
 // 找到start_index和end_index
@@ -69,7 +78,18 @@ MultiPoints2D cutFromPolyLine(const MultiPoints2D &polyline,
 
     return result;
 }
+std::vector<double> interpolate(double start, double end, int numPoints)
+{
+    std::vector<double> result;
 
+    double dx = (end - start) / (numPoints - 1);
+    for (int i = 0; i < numPoints; i++)
+    {
+        double x = start + i * dx;
+        result.push_back(x);
+    }
+    return result;
+}
 // numPoints 为插值后点的数量(包括原来的polyline起止点)，因此numPoints >= 3
 MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
 {
@@ -127,6 +147,17 @@ double getRadiusByChordCircum(double chord, double chordToCircum)
 {
     double radius = (chord * chord * 0.25 + chordToCircum * chordToCircum) / (2 * chordToCircum);
     return radius;
+}
+
+std::array<double, 2> getCenter(std::array<double, 2> chordMid, double angle, double radius, double chordtoCircum)
+{
+    std::array<double, 2> center;
+    double centertoChord = radius - chordtoCircum;
+    double radiusX = chordMid[0] - centertoChord * std::cos(angle);
+    double radiusY = chordMid[1] + centertoChord * std::sin(angle);
+    center[0] = radiusX;
+    center[1] = radiusY;
+    return center;
 }
 
 // 不包含线段的起始点和终止点，如果存在其他交点，则返回为true

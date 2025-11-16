@@ -19,6 +19,7 @@ void Solver::initialize()
     // step-3: 生成滑面
     Solver::slipsSet_ = setSlips(Solver::entryPointsSet_,
                                  Solver::exitPointsSet_,
+                                 Solver::cfg_.slips_num,
                                  Solver::slope_);
     // step-4: 生成切片
     Solver::slicesGeosSet_ = setSlicesGeos(Solver::entryPointsSet_,

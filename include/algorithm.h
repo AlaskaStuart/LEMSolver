@@ -7,17 +7,22 @@
 MultiPoints2D setEntryRange(const MultiPoints2D &polyline);
 MultiPoints2D setExitRange(const MultiPoints2D &polyline);
 
-DynamicContainer setSlips(const MultiPoints2D &entryPointsSet,
-                          const MultiPoints2D &exitPointsSet,
-                          const int &numSlips,
-                          const Slope &slope);
+VectorMap setSlips(const MultiPoints2D &entryPointsSet,
+                   const MultiPoints2D &exitPointsSet,
+                   const int &numSlips,
+                   const Slope &slope);
 
-DynamicContainer setSlicesGeos(const MultiPoints2D &entryPointsSet,
-                               const MultiPoints2D &exitPointsSet,
-                               const DynamicContainer &slipsSet,
-                               const Slope &slope);
+// double calculateLength(std::array<double, 2Ui64> &exitPoint, std::array<double, 2Ui64> &entryPoint);
 
-DynamicContainer setSlicesStratum(const DynamicContainer &slipsSet,
-                                  const Slope &slope);
+// const std::array<double, 2Ui64> &getMidPoint(std::array<double, 2Ui64> &entryPoint, std::array<double, 2Ui64> &exitPoint);
+
+VectorMap setSlicesGeos(const MultiPoints2D &entryPointsSet,
+                        const MultiPoints2D &exitPointsSet,
+                        const VectorMap &slipsSet,
+                        const Slope &slope,
+                        int &slicesNum);
+
+VectorMap setSlicesStratum(const VectorMap &slipsSet,
+                           const Slope &slope);
 
 #endif
