@@ -16,13 +16,13 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 
 // const std::array<double, 2Ui64> &getMidPoint(std::array<double, 2Ui64> &entryPoint, std::array<double, 2Ui64> &exitPoint);
 
-VectorMap setSlicesGeos(const MultiPoints2D &entryPointsSet,
+MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
                         const VectorMap &slipsSet,
                         const Slope &slope,
                         int &slicesNum);
 
-VectorMap setSlicesStratum(const VectorMap &slipsSet,
+MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
                            const Slope &slope);
 
 #endif

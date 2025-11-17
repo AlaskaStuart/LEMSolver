@@ -22,13 +22,14 @@ void Solver::initialize()
                                  Solver::cfg_.slips_num,
                                  Solver::slope_);
     // step-4: 生成切片
-    Solver::slicesGeosSet_ = setSlicesGeos(Solver::entryPointsSet_,
+    Solver::slicesGeomSet_ = setSlicesGeom(Solver::entryPointsSet_,
                                            Solver::exitPointsSet_,
                                            Solver::slipsSet_,
-                                           Solver::slope_);
+                                           Solver::slope_,
+                                           Solver::cfg_.slices_num);
 
     // step-5: 生成考虑了地层的切片
-    Solver::slicesStratumSet_ = setSlicesStratum(Solver::slipsSet_,
+    Solver::slicesStratumSet_ = setSlicesStratum(Solver::slicesGeomSet_,
                                                  Solver::slope_);
 }
 
@@ -47,8 +48,8 @@ SolverResult Solver::buildResult() const
     result.entryPointsSet = entryPointsSet_;
     result.exitPointsSet = exitPointsSet_;
     result.factorOfSafety = factorOfSafety_;
-    result.arcSlipsSet = slipsSet_;
-    result.slicesGeosSet = slicesGeosSet_;
+    result.slipsSet = slipsSet_;
+    result.slicesGeomSet = slicesGeomSet_;
 
     return result;
 }

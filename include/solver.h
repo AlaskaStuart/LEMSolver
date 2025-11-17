@@ -32,9 +32,9 @@ public:
     const MultiPoints2D &getExitRange() const { return exitRange_; };
     const MultiPoints2D &getEntryPointsSet() const { return entryPointsSet_; };
     const MultiPoints2D &getExitPointsSet() const { return exitPointsSet_; };
-    // DynamicContainer getArcSlipsSet() const { return slipsSet_; };
-    // DynamicContainer getSlicesGeosSet() const { return slicesGeosSet_; };
-    // DynamicContainer getSlicesStratumSet() const { return slicesStratumSet_; };
+    // CustomMatrix getArcSlipsSet() const { return slipsSet_; };
+    // CustomMatrix getSlicesGeosSet() const { return slicesGeosSet_; };
+    // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
     void startAnalysis(std::string method = "ordinary");
     const SolverResult &getResult() const { return buildResult(); };
@@ -50,10 +50,10 @@ private:
     MultiPoints2D exitPointsSet_;
 
     VectorMap slipsSet_;
-    VectorMap slicesGeosSet_;
-    VectorMap slicesStratumSet_;
+    MatrixMap slicesGeomSet_;
+    MatrixMap slicesStratumSet_;
 
-    std::vector<float> factorOfSafety_;
+    std::map<std::tuple<int, int, int>, float> factorOfSafety_;
 
     // SolverResult result_;
 

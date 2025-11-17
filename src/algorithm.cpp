@@ -97,56 +97,160 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
     return slipsMap;
 }
 
-VectorMap setSlicesGeos(const MultiPoints2D &entryPointsSet,
+// 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
+// 分割条带是个二维数组, shape = (3,slicesNum)
+// 第一行: 每个条带对应的x值
+// 第二行: 每个条带对应的y_top值
+// 第三行: 每个条带对应的y_bot值
+MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
                         const VectorMap &slipsSet,
                         const Slope &slope,
                         int &slicesNum)
 {
 
-    VectorMap slicesGeos;
-
-    for (int i = 0; i < entryPointsSet.size(); i++)
+    MatrixMap results;
+    for (auto &slip : slipsSet)
     {
-        for (int j = 0; j < exitPointsSet.size(); j++)
+        std::tuple<int, int, int> mapKey = slip.first;
+        std::vector<double> ithslip = slip.second;
+
+        CustomMatrix ithMat(3, slicesNum);
+
+        int entryPtIdx = std::get<0>(mapKey);
+        int exitPtIdx = std::get<1>(mapKey);
+        int slipIdx = std::get<2>(mapKey);
+
+        std::array<double, 2> entryPoint = entryPointsSet[entryPtIdx];
+        std::array<double, 2> exitPoint = exitPointsSet[exitPtIdx];
+
+        // x取切条的中值
+        std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], slicesNum + 1);
+        double dx = vectorX[1] - vectorX[0];
+        vectorX.pop_back();
+        std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
+                      { x += dx; });
+
+        // yTop
+        std::vector<double> vectorYtop;
+        for (double midX : vectorX)
         {
-            std::array<double, 2> entryPoint = entryPointsSet[i];
-            std::array<double, 2> exitPoint = exitPointsSet[j];
-
-            std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], slicesNum);
-            double dx = vectorX[1] - vectorX[0];
-            vectorX.pop_back();
-            std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
-                          { x += dx; });
-
-            std::vector<double> vectorYtop;
-            for (double midX : vectorX)
-            {
-                double midY = getYbyX(slope.slope_shape, midX);
-                vectorYtop.push_back(midY);
-            }
-            // std::vector<double> vectorXMid(vectorX.size());
-            // std::transform(vectorX.begin(),
-            //                vectorX.end(),
-            //                vectorXMid.begin(),
-            //                [dx](double x)
-            //                { return x + dx / 2; });
-            // vectorXMid.pop_back();
-            for (int k = 0; k < slipsSet.size(); k++)
-            {
-                std::tuple<int, int, int> mapKey = {i, j, k};
-
-                for (double midX : vectorX)
-                {
-                                }
-            }
+            double midY = getYbyX(slope.slope_shape, midX);
+            vectorYtop.push_back(midY);
         }
+
+        // yBot
+        // 圆弧的圆心坐标和半径
+        double slipCX = ithslip[0];
+        double slipCY = ithslip[1];
+        double slipCR = ithslip[2];
+
+        std::vector<double> vectorYbot(vectorX.size());
+        std::transform(vectorX.begin(),
+                       vectorX.end(),
+                       vectorYbot.begin(),
+                       [slipCX, slipCY, slipCR](double x)
+                       {
+                           return slipCY - std::sqrt(slipCR * slipCR - (slipCX - x) * (slipCX - x));
+                       });
+
+        // 保存ithMat
+        ithMat.setRow(0, vectorX);
+        ithMat.setRow(1, vectorYtop);
+        ithMat.setRow(2, vectorYbot);
+
+        results[mapKey] = ithMat;
     }
 
-    return slicesGeos;
+    return results;
 }
 
-VectorMap setSlicesStratum(const VectorMap &slipsSet,
+MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
                            const Slope &slope)
 {
+    MatrixMap results;
+
+    std::vector<struct Strata> stratums = slope.stratum;
+    int stratumSize = stratums.size();
+
+    for (auto &slices : slicesMap)
+    {
+        std::tuple<int, int, int> mapKey = slices.first;
+        CustomMatrix ithSlicesGeom = slices.second;
+
+        std::vector<double> slicesX = ithSlicesGeom.getRow(0);
+        std::vector<double> slicesYtop = ithSlicesGeom.getRow(1);
+        std::vector<double> slicesYbot = ithSlicesGeom.getRow(2);
+
+        // 初始化ithSlicesStratum
+        CustomMatrix ithSlicesStratum(1 + 2 * stratumSize, slicesX.size());
+        ithSlicesStratum.setRow(0, slicesX);
+
+        for (int i = 0; i < stratumSize; i++)
+        {
+            Strata ithStrata = stratums[i];
+
+            MultiPoints2D ithUpperBound = ithStrata.strata_upper_bound;
+            MultiPoints2D ithLowerBound = ithStrata.strata_lower_bound;
+
+            // 如果第i个条带与地层顶面和底面的交点在边坡表面之上, 或者顶面和底面的交点在滑坡面之下，
+            // 代表该地层与第i个条带不相交, 数值设为nan
+            // 如果第i个条带与地层顶面和底面的交点在边坡表面和滑裂面之间
+            // 代表第i个条带与地层完全相交
+            // 其他两种情况:
+            // 顶面交点在边坡表面之上, 底面交点在边坡表面和滑裂面之间, 取边坡表面点作为顶面交点
+            // 顶面交点在边坡表面和滑裂面之间, 底面交点在滑裂面之下, 取滑裂面点作为底面交点
+            std::vector<double> ithStrataTopVect;
+            std::vector<double> ithStrataBotVect;
+
+            for (int sliceIdx = 0; sliceIdx < slicesX.size(); sliceIdx++)
+            {
+                double ithSliceX = slicesX[sliceIdx];
+                double ithSliceYtop = slicesYtop[sliceIdx];
+                double ithSliceYbot = slicesYbot[sliceIdx];
+
+                double ithSliceStrataYtop = getYbyX(ithUpperBound, ithSliceX);
+                double ithSliceStrataYbot = getYbyX(ithLowerBound, ithSliceX);
+                // 底面交点在边坡表面之上, 或顶面交点在滑裂面之下
+                // 设为空
+                if ((ithSliceYbot > ithSliceStrataYtop) || (ithSliceYtop < ithSliceStrataYbot))
+                {
+                    ithStrataTopVect.push_back(std::nan(""));
+                    ithStrataBotVect.push_back(std::nan(""));
+                }
+                // // 顶面和底面的交点在边坡表面和滑裂面之间
+                // // 正常保存
+                // else if ((ithSliceYtop > ithSliceStrataYtop) && (ithSliceYbot < ithSliceStrataYbot))
+                // {
+                //     ithStrataTopVect.push_back(ithSliceYtop);
+
+                //     ithStrataBotVect.push_back(ithSliceYbot);
+                // }
+                // // 顶面交点在边坡表面之上, 底面交点在边坡表面和滑裂面之间
+                // // 底面交点在滑裂面之下, 顶面交点在边坡表面和滑裂面之间
+                // else
+                // {
+                //     double topVal = std::min(ithSliceYtop, ithSliceStrataYtop);
+                //     double botVal = std::max(ithSliceYbot, ithSliceStrataYbot);
+                //     ithStrataTopVect.push_back(topVal);
+                //     ithStrataBotVect.push_back(botVal);
+                // }
+                else
+                {
+                    double topVal = std::min(ithSliceYtop, ithSliceStrataYtop);
+                    double botVal = std::max(ithSliceYbot, ithSliceStrataYbot);
+                    ithStrataTopVect.push_back(topVal);
+                    ithStrataBotVect.push_back(botVal);
+                }
+            }
+
+            // 将地层相交情况保存至 ithSlicesStratum
+            ithSlicesStratum.setRow(1 + 2 * i, ithStrataTopVect);
+            ithSlicesStratum.setRow(1 + 2 * i + 1, ithStrataBotVect);
+        }
+
+        results[mapKey] = ithSlicesStratum;
+    }
+
+    return results;
 }

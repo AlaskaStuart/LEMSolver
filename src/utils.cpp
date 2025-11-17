@@ -30,3 +30,21 @@ void printPolyLine(const MultiPoints2D &poly)
 //     }
 //     return last_non_nan_idx;
 // }
+
+std::vector<bool> isVector1Bigger(const std::vector<double> vect1, const std::vector<double> vect2)
+{
+    if (vect1.size() != vect2.size())
+    {
+        throw std::runtime_error("vectors size must be equal.");
+    }
+    else
+    {
+        int n = vect1.size();
+        std::vector<bool> result(n);
+        for (int i = 0; i < n; ++i)
+        {
+            result[i] = (vect1[i] >= vect2[i]);
+        }
+        return result;
+    }
+}
