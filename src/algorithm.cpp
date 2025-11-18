@@ -35,6 +35,7 @@ MultiPoints2D setExitRange(const MultiPoints2D &polyline)
         std::array<double, 2> newPoint = {x, y};
         setExitRange[1] = newPoint;
     }
+    return setExitRange;
 }
 
 // 每个vector的前三个元素对应的是圆弧面的
@@ -398,3 +399,10 @@ double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vecto
 
     return result;
 }
+
+std::map<std::string, FSFunc> methodMap = {
+    {"Ordinary", calculateFSOrdinary},
+    {"Bishop", calculateFSBishop},
+    {"Janbu", calculateFSJanbu},
+    {"Spencer", calculateFSSpencer},
+    {"MorgensternPrice", calculateFSMorgensternPrice}};

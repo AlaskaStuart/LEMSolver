@@ -1,6 +1,7 @@
 #ifndef LEMSOLVER_SLOVER_H
 #define LEMSOLVER_SLOVER_H
 
+// #include "utils.h"
 #include "model.h"
 #include "algorithm.h"
 
@@ -59,7 +60,7 @@ public:
     // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
     std::map<std::tuple<int, int, int>, float> startAnalysis(std::string methodName = "ordinary");
-    const SolverResult &getResult() const { return buildResult(); };
+    const SolverResult getResult() const { return buildResult(); };
 
 private:
     SolverConfig cfg_;

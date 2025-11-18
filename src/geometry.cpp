@@ -2,6 +2,7 @@
 
 const std::array<double, 2> &getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint)
 {
+
     return {0.5 * (entryPoint[0] + exitPoint[0]), 0.5 * (entryPoint[1] + exitPoint[1])};
 }
 

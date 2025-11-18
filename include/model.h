@@ -5,15 +5,6 @@
 
 #include "utils.h"
 
-struct Slope
-{
-
-    MultiPoints2D slope_shape;
-    std::vector<Strata> stratum;
-    std::vector<Fault> faults;
-    MultiPoints2D water_level;
-};
-
 struct Strata
 {
 
@@ -31,6 +22,14 @@ struct Fault
 
     int fault_id;
     MultiPoints2D fault_shape;
+};
+struct Slope
+{
+
+    MultiPoints2D slope_shape;
+    std::vector<struct Strata> stratum;
+    std::vector<struct Fault> faults;
+    MultiPoints2D water_level;
 };
 
 void from_json(const json &j, Slope &s);

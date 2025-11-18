@@ -1,17 +1,11 @@
 #ifndef LEMSOLVER_ALGORITHM_H
 #define LEMSOLVER_ALGORITHM_H
 
+// #include "utils.h"
 #include "model.h"
 #include "geometry.h"
 
 using FSFunc = double (*)(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
-
-std::map<std::string, FSFunc> methodMap = {
-    {"Ordinary", calculateFSOrdinary},
-    {"Bishop", calculateFSBishop},
-    {"Janbu", calculateFSJanbu},
-    {"Spencer", calculateFSSpencer},
-    {"MorgensternPrice", calculateFSMorgensternPrice}};
 
 MultiPoints2D setEntryRange(const MultiPoints2D &polyline);
 MultiPoints2D setExitRange(const MultiPoints2D &polyline);
@@ -39,5 +33,7 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
 double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
 double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
+
+extern std::map<std::string, FSFunc> methodMap;
 
 #endif

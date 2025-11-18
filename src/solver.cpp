@@ -79,27 +79,27 @@ SolverResult Solver::buildResult() const
     return result;
 }
 
-// int main()
-// {
-//     // 读取json文件
-//     std::ifstream f("./data/sectionModel.json");
-//     if (!f.is_open())
-//     {
-//         std::cerr << "Error: cannot open ../../data/sectionModel.json\n";
-//         return -1;
-//     }
-//     nlohmann::json j;
+int main()
+{
+    // 读取json文件
+    std::ifstream f("./data/sectionModel.json");
+    if (!f.is_open())
+    {
+        std::cerr << "Error: cannot open ../../data/sectionModel.json\n";
+        return -1;
+    }
+    nlohmann::json j;
 
-//     // 解析json文件, 得到Slope对象
-//     f >> j;
-//     Slope slope = j.get<Slope>();
+    // 解析json文件, 得到Slope对象
+    f >> j;
+    Slope slope = j.get<Slope>();
 
-//     // 构造LEM-Solver对象
-//     Solver s = Solver(slope);
-//     // 开始分析计算
-//     s.startAnalysis();
-//     // 获取结果
-//     SolverResult result = s.getResult();
+    // 构造LEM-Solver对象
+    Solver s = Solver(slope);
+    // 开始分析计算
+    s.startAnalysis();
+    // 获取结果
+    SolverResult result = s.getResult();
 
-//     return 0;
-// }
+    return 0;
+}
