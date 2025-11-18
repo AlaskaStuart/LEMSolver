@@ -10,26 +10,25 @@ void printPolyLine(const MultiPoints2D &poly)
     std::cout << "\n";
 }
 
-// int getIndexOfLastNonNaN(const VectorMap &slice_stratum, int idx)
-// {
-//     if (slice_stratum.size() == 0)
-//     {
-//         throw std::runtime_error("Slice stratum is empty.");
-//     }
-//     if (idx < 0 || idx >= slice_stratum.size() - 1)
-//     {
-//         idx = slice_stratum.size()- 1;
-//     }
-//     int last_non_nan_idx = idx;
-//     for (; last_non_nan_idx >= 0; last_non_nan_idx--)
-//     {
-//         if (!std::isnan(slice_stratum(last_non_nan_idx, 0)))
-//         {
-//             break;
-//         }
-//     }
-//     return last_non_nan_idx;
-// }
+int getSliceBotIndex(const std::vector<double> &sliceStratum)
+{
+
+    int botIdx = sliceStratum.size() - 1;
+
+    while (botIdx > 2)
+    {
+        if (std::isnan(sliceStratum[botIdx]))
+        {
+            botIdx--;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return botIdx;
+}
 
 std::vector<bool> isVector1Bigger(const std::vector<double> vect1, const std::vector<double> vect2)
 {

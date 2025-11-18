@@ -18,6 +18,28 @@ output:
 -
 
 */
+
+// 保存极限平衡法计算所用的参数
+struct SolverConfig
+{
+    int entry_exit_points_num = 20;
+    int slips_num = 10;
+    int slices_num = 300;
+};
+
+// 保存极限平衡法计算结果
+struct SolverResult
+{
+    // plot elements
+    MultiPoints2D entryRange;
+    MultiPoints2D exitRange;
+    MultiPoints2D entryPointsSet;
+    MultiPoints2D exitPointsSet;
+    std::map<std::tuple<int, int, int>, float> factorOfSafety;
+    VectorMap slipsSet;
+    MatrixMap slicesGeomSet;
+};
+
 class Solver
 {
 public:
@@ -36,7 +58,7 @@ public:
     // CustomMatrix getSlicesGeosSet() const { return slicesGeosSet_; };
     // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
-    void startAnalysis(std::string method = "ordinary");
+    std::map<std::tuple<int, int, int>, float> startAnalysis(std::string methodName = "ordinary");
     const SolverResult &getResult() const { return buildResult(); };
 
 private:
@@ -54,8 +76,6 @@ private:
     MatrixMap slicesStratumSet_;
 
     std::map<std::tuple<int, int, int>, float> factorOfSafety_;
-
-    // SolverResult result_;
 
     void initialize();
 

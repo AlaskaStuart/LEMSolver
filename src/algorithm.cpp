@@ -73,24 +73,24 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
             for (int k = 0; k < numSlips; k++)
             {
                 std::tuple<int, int, int> mapKey = {i, j, k};
-                std::vector<double> ithArcSlip;
-                // some functions
 
                 double chordtoCircum = initChordtoCircum * (1 - k / double(numSlips));
                 double radius = getRadiusByChordCircum(chordLength, chordtoCircum);
                 std::array<double, 2> center = getCenter(ChordMid, chordHorizontalAngle, radius, chordtoCircum);
 
                 // 验证是否有交点
-
+                // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
                 int intersection = intersectionNum(slope.slope_shape, center, radius);
                 if (intersection < 3)
                 {
+                    std::vector<double> ithArcSlip;
+
                     ithArcSlip.push_back(center[0]);
                     ithArcSlip.push_back(center[1]);
                     ithArcSlip.push_back(radius);
-                }
 
-                slipsMap[mapKey] = ithArcSlip;
+                    slipsMap[mapKey] = ithArcSlip;
+                }
             }
         }
     }
@@ -112,8 +112,9 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
     MatrixMap results;
     for (auto &slip : slipsSet)
     {
-        std::tuple<int, int, int> mapKey = slip.first;
-        std::vector<double> ithslip = slip.second;
+        // 减少深拷贝，提升效率
+        const std::tuple<int, int, int> &mapKey = slip.first;
+        const std::vector<double> &ithslip = slip.second;
 
         CustomMatrix ithMat(3, slicesNum);
 
@@ -121,8 +122,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         int exitPtIdx = std::get<1>(mapKey);
         int slipIdx = std::get<2>(mapKey);
 
-        std::array<double, 2> entryPoint = entryPointsSet[entryPtIdx];
-        std::array<double, 2> exitPoint = exitPointsSet[exitPtIdx];
+        const std::array<double, 2> &entryPoint = entryPointsSet[entryPtIdx];
+        const std::array<double, 2> &exitPoint = exitPointsSet[exitPtIdx];
 
         // x取切条的中值
         std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], slicesNum + 1);
@@ -165,6 +166,10 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
     return results;
 }
 
+// 值为CustomMatrix
+// CustomMatrix第0行为x值
+// CustomMatrix第1+2*i行为第i层顶面的切片
+// CustomMatrix第1+2*i+1行为第i层底面的切片
 MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
                            const Slope &slope)
 {
@@ -253,4 +258,143 @@ MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
     }
 
     return results;
+}
+
+double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+
+    double pushingForce = 0.0;
+    double resistanceForce = 0.0;
+
+    int stratumSize = stratum.size();
+    const std::vector<double> &slicesX = slicesStratum.getRow(0);
+
+    // 条带宽度
+    double dx = slicesX[1] - slicesX[0];
+
+    // 边坡方向: 左低右高为正，左高右低为负.
+    const std::vector<double> &firstSlice = slicesStratum.getCol(0);
+    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getCol(0).size() - 1);
+    int leftIdx = 1;
+    while (leftIdx < firstSlice.size() && firstSlice[leftIdx] == std::nan(""))
+    {
+        leftIdx++;
+    }
+    double beginning = firstSlice[leftIdx];
+
+    int rightIdx = 1;
+    while (rightIdx < lastSlice.size() && lastSlice[rightIdx] == std::nan(""))
+    {
+        rightIdx++;
+    }
+    double ending = lastSlice[rightIdx];
+    // 边坡方向
+    double dir = ending - beginning;
+
+    // 沿x轴自左至右
+    // 逐个条带计算重量以及条带底部的摩擦力和黏聚力。
+    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
+    {
+        // 条带的滑移力和抗滑移力
+        double sliceResistanceForce = 0;
+        double slicePushForce = 0;
+
+        const std::vector<double> &currentSlice = slicesStratum.getCol(sliceIdx);
+        const std::vector<double> &nextSlice = slicesStratum.getCol(sliceIdx + 1);
+
+        // 找到条带底部所属的地层
+        int currBotStrataIdx = getSliceBotIndex(currentSlice);
+        int nextBotStrataIdx = getSliceBotIndex(nextSlice);
+
+        // 获取其黏聚力和内摩擦角
+        double botStrataCohesion = stratum[currBotStrataIdx / 2 - 1].cohesion;
+        double botStrataFrictionAngle = stratum[currBotStrataIdx / 2 - 1].friction_angle;
+
+        // 计算条带底边的长度和倾角
+        double botDy = nextSlice[nextBotStrataIdx] - currentSlice[currBotStrataIdx];
+
+        double botLength = std::sqrt(botDy * botDy + dx * dx);
+        double botAngle = std::atan2(botDy, dx);
+
+        // 计算条带的黏聚力、摩擦力和重力
+
+        // 1.黏聚力
+        double sliceCohesionForce = botStrataCohesion * botLength;
+
+        // 计算条块重量
+        // weight = sum(dx*dy*density)
+        double sliceWeight = 0.0;
+        for (int strataIdx = 0; strataIdx <= currBotStrataIdx; strataIdx++)
+        {
+            double currSliceStrataTop = currentSlice[1 + strataIdx * 2];
+            double currSliceStrataBot = currentSlice[1 + strataIdx * 2 + 1];
+
+            if (std::isnan(currSliceStrataTop) || std::isnan(currSliceStrataBot))
+            {
+                continue;
+            }
+            else
+            {
+                double density = stratum[strataIdx].density;
+                double dy = currSliceStrataTop - currSliceStrataBot;
+
+                sliceWeight += dy * density * dx;
+            }
+        }
+        // 摩擦力
+        double sliceFriction = abs(sliceWeight * std::cos(botAngle) * std::tan(botStrataFrictionAngle));
+
+        // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
+        // 摩擦力方向相反, 无推动力, 所有力参与抵抗
+        if (botAngle * dir < 0)
+        {
+            // 条带的抵抗力 = 条带黏聚力 -摩擦力 + 重力分量
+            sliceResistanceForce = sliceCohesionForce - sliceFriction + sliceWeight * std::sin(botAngle);
+        }
+        // 摩擦力方向正常
+        else
+        {
+            // 条带的抵抗力 = 条带黏聚力 + 摩擦力
+            sliceResistanceForce = sliceCohesionForce + sliceFriction;
+
+            // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
+            slicePushForce = sliceWeight * std::sin(botAngle);
+        }
+
+        resistanceForce += sliceResistanceForce;
+        pushingForce += slicePushForce;
+    }
+
+    double result = resistanceForce / pushingForce;
+
+    return result;
+}
+
+double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+    float result = -1.0;
+    float pushingForce = 0.0;
+
+    return result;
+}
+double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+    float result = -1.0;
+    float pushingForce = 0.0;
+
+    return result;
+}
+double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+    float result = -1.0;
+    float pushingForce = 0.0;
+
+    return result;
+}
+double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+    float result = -1.0;
+    float pushingForce = 0.0;
+
+    return result;
 }

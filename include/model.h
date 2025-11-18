@@ -9,8 +9,8 @@ struct Slope
 {
 
     MultiPoints2D slope_shape;
-    std::vector<struct Strata> stratum;
-    std::vector<struct Fault> faults;
+    std::vector<Strata> stratum;
+    std::vector<Fault> faults;
     MultiPoints2D water_level;
 };
 

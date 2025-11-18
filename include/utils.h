@@ -26,6 +26,7 @@ const double INIT_SLIP_DEPTH_FACTOR = 1.1;
 
 // ------------------命名空间声明--------------------
 
+// json模块
 using json = nlohmann::json;
 
 // 动态数组容器，m*2的矩阵
@@ -46,7 +47,7 @@ using MatrixMap = std::map<std::tuple<int, int, int>, CustomMatrix>;
 // 打印多边形的线条
 void printPolyLine(const MultiPoints2D &poly);
 
-int getIndexOfLastNonNaN(const VectorMap &slice_stratum, int idx = -1);
+int getSliceBotIndex(const std::vector<double> &sliceStratum);
 
 std::vector<bool> isVector1Bigger(const std::vector<double> vect1, const std::vector<double> vect2);
 
@@ -112,27 +113,6 @@ public:
             col[r] = data[r * m_cols + c];
         return col;
     }
-};
-
-// 保存极限平衡法计算所用的参数
-struct SolverConfig
-{
-    int entry_exit_points_num = 20;
-    int slips_num = 10;
-    int slices_num = 300;
-};
-
-// 保存极限平衡法计算结果
-struct SolverResult
-{
-    // plot elements
-    MultiPoints2D entryRange;
-    MultiPoints2D exitRange;
-    MultiPoints2D entryPointsSet;
-    MultiPoints2D exitPointsSet;
-    std::map<std::tuple<int, int, int>, float> factorOfSafety;
-    VectorMap slipsSet;
-    MatrixMap slicesGeomSet;
 };
 
 #endif
