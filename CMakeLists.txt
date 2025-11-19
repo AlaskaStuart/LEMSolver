@@ -24,15 +24,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ===== VCPKG（推荐用外部配置）=====
 # 不直接在这里写 toolchain 文件路径
 # set(CMAKE_TOOLCHAIN_FILE "$ENV{vcpkgRoot}/scripts/buildsystems/vcpkg.cmake")
-
+# ===== MSVC 编码修复（核心）=====
+if (MSVC)
+    add_compile_options(/utf-8)
+endif()
 # ===== 查找依赖 =====
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-
+# ===== 源文件 =====
 file(GLOB SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-
-# add_executable(${PROJECT_NAME} main.cpp)
 add_executable(${PROJECT_NAME} ${SRC_FILES})
+
+# ===== include 路径 =====
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(${PROJECT_NAME}
