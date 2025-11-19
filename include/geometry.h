@@ -2,7 +2,7 @@
 #define LEMSOLVER_GEOMETRY_H
 
 #include "utils.h"
-const std::array<double, 2> &getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint);
+std::array<double, 2> getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint);
 
 double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &entryPoint);
 
