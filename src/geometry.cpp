@@ -10,6 +10,7 @@ double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &
 {
     return std::sqrt(std::pow(exitPoint[0] - entryPoint[0], 2) + std::pow(exitPoint[1] - entryPoint[1], 2));
 }
+
 // 根据指定的起始点和终止点截取折线段, 需要以指定的起始点开始, 指定的终止点结束
 // 实现过程:
 // 找到start_index和end_index
@@ -79,6 +80,7 @@ MultiPoints2D cutFromPolyLine(const MultiPoints2D &polyline,
 
     return result;
 }
+
 std::vector<double> interpolate(double start, double end, int numPoints)
 {
     std::vector<double> result;
@@ -91,6 +93,7 @@ std::vector<double> interpolate(double start, double end, int numPoints)
     }
     return result;
 }
+
 // numPoints 为插值后点的数量(包括原来的polyline起止点)，因此numPoints >= 3
 MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
 {
@@ -113,7 +116,7 @@ MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
     }
     else
     {
-        double dx = (polyline.front()[0] - polyline.back()[0]) / (numPoints - 1);
+        double dx = (polyline.back()[0] - polyline.front()[0]) / (numPoints - 1);
 
         for (int i = 0; i < numPoints; i++)
         {
@@ -365,31 +368,3 @@ double getYbyX(const MultiPoints2D &polyline, double x)
 
     return result;
 }
-
-// int main()
-// {
-//     // 定义一个示例折线
-//     MultiPoints2D polyline = {
-//         {0.0, 0.0},
-//         {1.0, 2.0},
-//         {2.0, 3.0},
-//         {3.0, 5.0},
-//         {4.0, 4.0},
-//         {5.0, 2.0}};
-
-//     std::array<double, 2> startPoint = {1.5, 2.5};
-//     std::array<double, 2> endPoint = {4.5, 3.0};
-
-//     try
-//     {
-//         MultiPoints2D subLine = cutFromPolyLine(polyline, startPoint, endPoint);
-//         std::cout << "Cutted polyline:\n";
-//         printPolyLine(subLine);
-//     }
-//     catch (const std::exception &e)
-//     {
-//         std::cerr << "Error: " << e.what() << "\n";
-//     }
-
-//     return 0;
-// }
