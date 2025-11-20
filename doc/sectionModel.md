@@ -74,3 +74,26 @@ flowchart LR
   "water_level": []
 }
 ```
+
+- launch文件
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "CMake Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "logging": {"engineLogging":false}
+        }
+    ]
+}
+
+```
