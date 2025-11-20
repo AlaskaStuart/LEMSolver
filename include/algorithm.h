@@ -7,13 +7,16 @@
 
 using FSFunc = double (*)(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
-MultiPoints2D setEntryRange(const MultiPoints2D &polyline);
-MultiPoints2D setExitRange(const MultiPoints2D &polyline);
+std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline);
 
+// VectorMap setSlips(const MultiPoints2D &entryPointsSet,
+//                    const MultiPoints2D &exitPointsSet,
+//                    const int &numSlips,
+//                    const Slope &slope);
 VectorMap setSlips(const MultiPoints2D &entryPointsSet,
                    const MultiPoints2D &exitPointsSet,
                    const int &numSlips,
-                   const Slope &slope);
+                   const MultiPoints2D &slopeShape);
 
 MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,

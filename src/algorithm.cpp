@@ -1,59 +1,86 @@
 #include "algorithm.h"
 
-MultiPoints2D setEntryRange(const MultiPoints2D &polyline)
-{
-    MultiPoints2D entryRange;
+// 设置破裂面的入口范围
+// 以边坡坡顶作为入口, 且入口范围长度不超过MAX_ENTRY_EXIT_LENGTH
 
+std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline)
+{
+    // MultiPoints2D entryRange;
+    // MultiPoints2D exitRange;
+    // std::pair<MultiPoints2D, MultiPoints2D> result;
+    int plineSize = polyline.size();
+
+    if (plineSize < 2)
+    {
+        throw std::runtime_error("Polyline size must be greater than 1.");
+    }
     std::array<double, 2> p1 = polyline.front();
     std::array<double, 2> p2 = polyline[1];
 
-    entryRange.push_back(p1);
-    entryRange.push_back(p2);
-    double lengthP1P2 = std::sqrt(std::pow(p2[0] - p1[0], 2) + std::pow(p2[1] - p1[1], 2));
+    std::array<double, 2> p3 = polyline[plineSize - 2];
+    std::array<double, 2> p4 = polyline.back();
+    double lengthP1P2 = calculateLength(p1, p2);
+    double lengthP3P4 = calculateLength(p3, p4);
     if (lengthP1P2 > MAX_ENTRY_EXIT_LENGTH)
     {
-        double x = p2[0] - MAX_ENTRY_EXIT_LENGTH;
-        double y = getYbyX(entryRange, x);
-        std::array<double, 2> newPoint = {x, y};
-        entryRange[0] = newPoint;
+        p1[0] = p2[0] - MAX_ENTRY_EXIT_LENGTH;
+        p1[1] = getYbyX(polyline, p1[0]);
     }
-    return entryRange;
-}
+    if (lengthP3P4 > MAX_ENTRY_EXIT_LENGTH)
+    {
+        p4[0] = p3[0] + MAX_ENTRY_EXIT_LENGTH;
+        p4[1] = getYbyX(polyline, p4[0]);
+    }
 
-MultiPoints2D setExitRange(const MultiPoints2D &polyline)
-{
-    MultiPoints2D setExitRange;
-    std::array<double, 2> p1 = polyline.back();
-    std::array<double, 2> p2 = polyline[polyline.size() - 2];
-    setExitRange.push_back(p1);
-    setExitRange.push_back(p2);
-    double lengthP1P2 = std::sqrt(std::pow(p2[0] - p1[0], 2) + std::pow(p2[1] - p1[1], 2));
-    if (lengthP1P2 > MAX_ENTRY_EXIT_LENGTH)
+    // 判断p1p2和p3p4那个是入口，哪个是出口
+    // if (p1[1] > p3[1])
+    // {
+    //     entryRange.push_back(p1);
+    //     entryRange.push_back(p2);
+    //     exitRange.push_back(p3);
+    //     exitRange.push_back(p4);
+    //     result.first = entryRange;
+    //     result.second = exitRange;
+    // }
+    // else
+    // {
+    //     exitRange.push_back(p1);
+    //     exitRange.push_back(p2);
+    //     entryRange.push_back(p3);
+    //     entryRange.push_back(p4);
+    //     result.first = entryRange;
+    //     result.second = exitRange;
+    // }
+    // return result;
+
+    // 高的那一侧作为入口, 低的那一侧作为出口
+    MultiPoints2D entry, exit;
+    auto pushRange = [](auto &v, const auto &a, const auto &b)
     {
-        double x = p2[0] + MAX_ENTRY_EXIT_LENGTH;
-        double y = getYbyX(setExitRange, x);
-        std::array<double, 2> newPoint = {x, y};
-        setExitRange[1] = newPoint;
+        v.push_back(a);
+        v.push_back(b);
+    };
+
+    if (p1[1] > p3[1])
+    {
+        pushRange(entry, p1, p2);
+        pushRange(exit, p3, p4);
     }
-    return setExitRange;
+    else
+    {
+        pushRange(exit, p1, p2);
+        pushRange(entry, p3, p4);
+    }
+    return {entry, exit};
 }
 
 // 每个vector的前三个元素对应的是圆弧面的
 VectorMap setSlips(const MultiPoints2D &entryPointsSet,
                    const MultiPoints2D &exitPointsSet,
                    const int &numSlips,
-                   const Slope &slope)
+                   const MultiPoints2D &slopeShape)
 {
     VectorMap slipsMap;
-    // for (const std::array<double, 2> &entryPoint : entryPointsSet)
-    // {
-    //     for (const std::array<double, 2> &exitPoint : exitPointsSet)
-    //     {
-    //         for (int i = 0; i < numSlips; i++)
-    //         {
-    //                     }
-    //     }
-    // }
     for (int i = 0; i < entryPointsSet.size(); i++)
     {
         for (int j = 0; j < exitPointsSet.size(); j++)
@@ -69,7 +96,7 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 
             double chordHorizontalAngle = std::atan2(entryPoint[1] - exitPoint[1], entryPoint[0] - exitPoint[0]);
 
-            double initChordtoCircum = INIT_SLIP_DEPTH_FACTOR * std::abs(2 * chordLength * std::tan(chordHorizontalAngle));
+            double initChordtoCircum = INIT_SLIP_DEPTH_FACTOR * std::abs(chordLength / 2 * std::tan(chordHorizontalAngle));
 
             for (int k = 0; k < numSlips; k++)
             {
@@ -81,7 +108,8 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 
                 // 验证是否有交点
                 // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
-                int intersection = intersectionNum(slope.slope_shape, center, radius);
+                MultiPoints2D cuttedPolyline = cutFromPolyLine(slopeShape, entryPoint, exitPoint);
+                int intersection = intersectionNum(cuttedPolyline, center, radius);
                 if (intersection < 3)
                 {
                     std::vector<double> ithArcSlip;
@@ -97,6 +125,69 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
     }
     return slipsMap;
 }
+
+// --------------------------------------------------------
+// 作废
+
+// VectorMap setSlips(const MultiPoints2D &entryPointsSet,
+//                    const MultiPoints2D &exitPointsSet,
+//                    const int &numSlips,
+//                    const Slope &slope)
+// {
+//     VectorMap slipsMap;
+//     // for (const std::array<double, 2> &entryPoint : entryPointsSet)
+//     // {
+//     //     for (const std::array<double, 2> &exitPoint : exitPointsSet)
+//     //     {
+//     //         for (int i = 0; i < numSlips; i++)
+//     //         {
+//     //                     }
+//     //     }
+//     // }
+//     for (int i = 0; i < entryPointsSet.size(); i++)
+//     {
+//         for (int j = 0; j < exitPointsSet.size(); j++)
+//         {
+
+//             std::array<double, 2> entryPoint = entryPointsSet[i];
+//             std::array<double, 2> exitPoint = exitPointsSet[j];
+//             // 获得初始滑裂面圆弧
+//             // 以入口点和出口点的连线作为滑裂圆弧的弦
+//             // 获得初始的自弦至滑裂面圆弧的距离
+//             std::array<double, 2> ChordMid = getMidPoint(entryPoint, exitPoint);
+//             double chordLength = calculateLength(exitPoint, entryPoint);
+
+//             double chordHorizontalAngle = std::atan2(entryPoint[1] - exitPoint[1], entryPoint[0] - exitPoint[0]);
+
+//             double initChordtoCircum = INIT_SLIP_DEPTH_FACTOR * std::abs(2 * chordLength * std::tan(chordHorizontalAngle));
+
+//             for (int k = 0; k < numSlips; k++)
+//             {
+//                 std::tuple<int, int, int> mapKey = {i, j, k};
+
+//                 double chordtoCircum = initChordtoCircum * (1 - k / double(numSlips));
+//                 double radius = getRadiusByChordCircum(chordLength, chordtoCircum);
+//                 std::array<double, 2> center = getCenter(ChordMid, chordHorizontalAngle, radius, chordtoCircum);
+
+//                 // 验证是否有交点
+//                 // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
+//                 MultiPoints2D cuttedPolyline = cutFromPolyLine(slope.slope_shape, entryPoint, exitPoint);
+//                 int intersection = intersectionNum(cuttedPolyline, center, radius);
+//                 if (intersection < 3)
+//                 {
+//                     std::vector<double> ithArcSlip;
+
+//                     ithArcSlip.push_back(center[0]);
+//                     ithArcSlip.push_back(center[1]);
+//                     ithArcSlip.push_back(radius);
+
+//                     slipsMap[mapKey] = ithArcSlip;
+//                 }
+//             }
+//         }
+//     }
+//     return slipsMap;
+// }
 
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
 // 分割条带是个二维数组, shape = (3,slicesNum)

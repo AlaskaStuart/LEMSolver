@@ -8,8 +8,9 @@
 void Solver::initialize()
 {
     // step-1: 确定破裂面的入口和出口位置
-    Solver::entryRange_ = setEntryRange(Solver::slope_.slope_shape);
-    Solver::exitRange_ = setExitRange(Solver::slope_.slope_shape);
+    std::pair<MultiPoints2D, MultiPoints2D> entryExit = setEntryExitRange(Solver::slope_.slope_shape);
+    Solver::entryRange_ = entryExit.first;
+    Solver::exitRange_ = entryExit.second;
 
     // step-2: 插值生成入口点和出口点
     Solver::entryPointsSet_ = interpolatedPolyLine(entryRange_,
@@ -20,7 +21,7 @@ void Solver::initialize()
     Solver::slipsSet_ = setSlips(Solver::entryPointsSet_,
                                  Solver::exitPointsSet_,
                                  Solver::cfg_.slips_num,
-                                 Solver::slope_);
+                                 Solver::slope_.slope_shape);
     // step-4: 生成切片, 圆弧型或复合型
     Solver::slicesGeomSet_ = setSlicesGeom(Solver::entryPointsSet_,
                                            Solver::exitPointsSet_,

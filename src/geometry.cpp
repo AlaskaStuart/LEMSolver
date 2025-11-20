@@ -155,9 +155,22 @@ double getRadiusByChordCircum(double chord, double chordToCircum)
 
 std::array<double, 2> getCenter(std::array<double, 2> chordMid, double angle, double radius, double chordtoCircum)
 {
+
+    // 判断angle大小
+    // 如果angle大于pi/2, 则取angle-pi/2
+    // 如果angle小于pi/2, 则取angle+pi/2
+    if (angle > M_PI_2)
+    {
+        angle = angle - M_PI_2;
+    }
+    else
+    {
+        angle = angle + M_PI_2;
+    }
+
     std::array<double, 2> center;
     double centertoChord = radius - chordtoCircum;
-    double radiusX = chordMid[0] - centertoChord * std::cos(angle);
+    double radiusX = chordMid[0] + centertoChord * std::cos(angle);
     double radiusY = chordMid[1] + centertoChord * std::sin(angle);
     center[0] = radiusX;
     center[1] = radiusY;
@@ -227,6 +240,7 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
         return isIntersected;
     };
 }
+
 // 实现原理:
 //  vect_delta = p1 -center
 //  vect_dir = p2 - p1
