@@ -97,6 +97,10 @@ std::vector<double> interpolate(double start, double end, int numPoints)
 // numPoints 为插值后点的数量(包括原来的polyline起止点)，因此numPoints >= 3
 MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
 {
+    if (numPoints < 2)
+    {
+        throw std::runtime_error("interpolation number must greater than 2");
+    }
     MultiPoints2D result;
     result.reserve(numPoints);
     if (polyline.size() < 2)

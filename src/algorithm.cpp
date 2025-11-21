@@ -2,7 +2,6 @@
 
 // 设置破裂面的入口范围
 // 以边坡坡顶作为入口, 且入口范围长度不超过MAX_ENTRY_EXIT_LENGTH
-
 std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline)
 {
     // MultiPoints2D entryRange;
@@ -126,69 +125,6 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
     return slipsMap;
 }
 
-// --------------------------------------------------------
-// 作废
-
-// VectorMap setSlips(const MultiPoints2D &entryPointsSet,
-//                    const MultiPoints2D &exitPointsSet,
-//                    const int &numSlips,
-//                    const Slope &slope)
-// {
-//     VectorMap slipsMap;
-//     // for (const std::array<double, 2> &entryPoint : entryPointsSet)
-//     // {
-//     //     for (const std::array<double, 2> &exitPoint : exitPointsSet)
-//     //     {
-//     //         for (int i = 0; i < numSlips; i++)
-//     //         {
-//     //                     }
-//     //     }
-//     // }
-//     for (int i = 0; i < entryPointsSet.size(); i++)
-//     {
-//         for (int j = 0; j < exitPointsSet.size(); j++)
-//         {
-
-//             std::array<double, 2> entryPoint = entryPointsSet[i];
-//             std::array<double, 2> exitPoint = exitPointsSet[j];
-//             // 获得初始滑裂面圆弧
-//             // 以入口点和出口点的连线作为滑裂圆弧的弦
-//             // 获得初始的自弦至滑裂面圆弧的距离
-//             std::array<double, 2> ChordMid = getMidPoint(entryPoint, exitPoint);
-//             double chordLength = calculateLength(exitPoint, entryPoint);
-
-//             double chordHorizontalAngle = std::atan2(entryPoint[1] - exitPoint[1], entryPoint[0] - exitPoint[0]);
-
-//             double initChordtoCircum = INIT_SLIP_DEPTH_FACTOR * std::abs(2 * chordLength * std::tan(chordHorizontalAngle));
-
-//             for (int k = 0; k < numSlips; k++)
-//             {
-//                 std::tuple<int, int, int> mapKey = {i, j, k};
-
-//                 double chordtoCircum = initChordtoCircum * (1 - k / double(numSlips));
-//                 double radius = getRadiusByChordCircum(chordLength, chordtoCircum);
-//                 std::array<double, 2> center = getCenter(ChordMid, chordHorizontalAngle, radius, chordtoCircum);
-
-//                 // 验证是否有交点
-//                 // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
-//                 MultiPoints2D cuttedPolyline = cutFromPolyLine(slope.slope_shape, entryPoint, exitPoint);
-//                 int intersection = intersectionNum(cuttedPolyline, center, radius);
-//                 if (intersection < 3)
-//                 {
-//                     std::vector<double> ithArcSlip;
-
-//                     ithArcSlip.push_back(center[0]);
-//                     ithArcSlip.push_back(center[1]);
-//                     ithArcSlip.push_back(radius);
-
-//                     slipsMap[mapKey] = ithArcSlip;
-//                 }
-//             }
-//         }
-//     }
-//     return slipsMap;
-// }
-
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
 // 分割条带是个二维数组, shape = (3,slicesNum)
 // 第一行: 每个条带对应的x值
@@ -197,18 +133,25 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
                         const VectorMap &slipsSet,
-                        const Slope &slope,
+                        const MultiPoints2D &slopeShape,
                         int &slicesNum)
 {
 
     MatrixMap results;
+
+    // 插值生成条带, 不包含入口点和出口点, 个数为slicesNum
+    // 因此取参数时slicesNum + 2
+    // 生成slices的时候移除最后一个
+    // 返回的结果是slicesNum+1个长度
+    // 最后在计算安全系数时, 只考虑前slicesNum个条带,实际利用上的条带数量为sliceNum个
+    int matrixRow = slicesNum + 1;
     for (auto &slip : slipsSet)
     {
         // 减少深拷贝，提升效率
         const std::tuple<int, int, int> &mapKey = slip.first;
         const std::vector<double> &ithslip = slip.second;
 
-        CustomMatrix ithMat(3, slicesNum);
+        CustomMatrix ithMat(3, matrixRow);
 
         int entryPtIdx = std::get<0>(mapKey);
         int exitPtIdx = std::get<1>(mapKey);
@@ -217,22 +160,29 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         const std::array<double, 2> &entryPoint = entryPointsSet[entryPtIdx];
         const std::array<double, 2> &exitPoint = exitPointsSet[exitPtIdx];
 
-        // x取切条的中值
-        std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], slicesNum + 1);
+        // 插值生成x
+        std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], matrixRow + 1);
         double dx = vectorX[1] - vectorX[0];
+        // vectorX.erase(vectorX.begin());//移除第一个元素
+        // 移除最后一个元素
         vectorX.pop_back();
+        // x取切条的中值
         std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
-                      { x += dx; });
+                      { x += dx / 2; });
 
         // yTop
+        // 根据x在slopeShape上找到相应的y值
         std::vector<double> vectorYtop;
         for (double midX : vectorX)
         {
-            double midY = getYbyX(slope.slope_shape, midX);
+            double midY = getYbyX(slopeShape, midX);
             vectorYtop.push_back(midY);
         }
 
         // yBot
+        // 根据x与滑面圆之间的关系生成y值
+        // | [x, yBot]-[xC, yC] | = R
+        // xC, yC, R已知, 带入x可求得yBot
         // 圆弧的圆心坐标和半径
         double slipCX = ithslip[0];
         double slipCY = ithslip[1];
@@ -365,8 +315,10 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
     double dx = slicesX[1] - slicesX[0];
 
     // 边坡方向: 左低右高为正，左高右低为负.
+    // 找到最左边条带的顶点y值, 即入口点y值
+    // 找到最右边条带的顶点y值, 即出口点y值
     const std::vector<double> &firstSlice = slicesStratum.getCol(0);
-    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getCol(0).size() - 1);
+    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getRow(0).size() - 1);
     int leftIdx = 1;
     while (leftIdx < firstSlice.size() && firstSlice[leftIdx] == std::nan(""))
     {
@@ -380,12 +332,14 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
         rightIdx++;
     }
     double ending = lastSlice[rightIdx];
-    // 边坡方向
+    // 最右边的y值-最左边的y值,  两者的x之差只能为正值
+    // 因此y值之差的正负决定边坡方向
     double dir = ending - beginning;
 
     // 沿x轴自左至右
     // 逐个条带计算重量以及条带底部的摩擦力和黏聚力。
-    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
+    // 为防止out_of_range error, 最后一个条带不纳入计算
+    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
     {
         // 条带的滑移力和抗滑移力
         double sliceResistanceForce = 0;

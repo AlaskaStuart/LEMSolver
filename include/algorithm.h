@@ -18,10 +18,15 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
                    const int &numSlips,
                    const MultiPoints2D &slopeShape);
 
+// MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
+//                         const MultiPoints2D &exitPointsSet,
+//                         const VectorMap &slipsSet,
+//                         const Slope &slope,
+//                         int &slicesNum);
 MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
                         const VectorMap &slipsSet,
-                        const Slope &slope,
+                        const MultiPoints2D &slopeShape,
                         int &slicesNum);
 
 MatrixMap setSlicesStratum(const MatrixMap &slicesMap,

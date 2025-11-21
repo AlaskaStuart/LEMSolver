@@ -26,7 +26,7 @@ void Solver::initialize()
     Solver::slicesGeomSet_ = setSlicesGeom(Solver::entryPointsSet_,
                                            Solver::exitPointsSet_,
                                            Solver::slipsSet_,
-                                           Solver::slope_,
+                                           Solver::slope_.slope_shape,
                                            Solver::cfg_.slices_num);
 
     // step-5: 生成考虑了地层的切片

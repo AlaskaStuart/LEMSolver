@@ -139,17 +139,17 @@ int main()
         {4582.2244, 2570.1421},
         {4882.2244, 2570.1421}};
 
-    MultiPoints2D slopeShp = {
-        {3674.3783, 2570.1421},
-        {3874.3783, 2570.1421},
-        {3926.3398, 2600.1421},
-        {3976.3398, 2600.1421},
-        {4028.3013, 2630.1421},
-        {4228.3013, 2630.1421}};
+    // MultiPoints2D slopeShp = {
+    //     {3674.3783, 2570.1421},
+    //     {3874.3783, 2570.1421},
+    //     {3926.3398, 2600.1421},
+    //     {3976.3398, 2600.1421},
+    //     {4028.3013, 2630.1421},
+    //     {4228.3013, 2630.1421}};
 
-    std::pair<MultiPoints2D, MultiPoints2D> entryExitRangeOrd = setEntryExitRange(slopeShp);
-    MultiPoints2D entryRangeOrd = entryExitRangeOrd.first;
-    MultiPoints2D exitRangeOrd = entryExitRangeOrd.second;
+    // std::pair<MultiPoints2D, MultiPoints2D> entryExitRangeOrd = setEntryExitRange(slopeShp);
+    // MultiPoints2D entryRangeOrd = entryExitRangeOrd.first;
+    // MultiPoints2D exitRangeOrd = entryExitRangeOrd.second;
 
     std::pair<MultiPoints2D, MultiPoints2D> entryExitRangeRev = setEntryExitRange(slopeReverse);
     MultiPoints2D entryRangeRev = entryExitRangeRev.first;
@@ -159,11 +159,14 @@ int main()
 
     // TEST algorithm的setSlips
 
-    int sliceNum = 2;
-    MultiPoints2D entryPointsSet = interpolatedPolyLine(entryRangeRev, sliceNum + 2);
-    MultiPoints2D exitPointsSet = interpolatedPolyLine(exitRangeRev, sliceNum + 2);
+    int entryExitNum = 3;
+    int slipNum = 1;
+    int slicesNum = 10;
+    MultiPoints2D entryPointsSet = interpolatedPolyLine(entryRangeRev, entryExitNum);
+    MultiPoints2D exitPointsSet = interpolatedPolyLine(exitRangeRev, entryExitNum);
     // std::cout << "entryPointsSet size: " << entryPointsSet.size() << "\n";
-    VectorMap slipSet = setSlips(entryPointsSet, exitPointsSet, sliceNum, slopeReverse);
+
+    VectorMap slipSet = setSlips(entryPointsSet, exitPointsSet, slipNum, slopeReverse);
 
     // for (auto it = slipSet.begin(); it != slipSet.end(); it++)
     // {
@@ -181,5 +184,10 @@ int main()
     //     std::cout << "\n";
     // }
 
+    // TEST algorithm的setSlicesGeom
+    MatrixMap sliceSet = setSlicesGeom(entryPointsSet, exitPointsSet, slipSet, slopeReverse, slicesNum);
+    std::cout << "sliceSet size: " << sliceSet.size() << "\n";
+
+        std::cout << "TEST FINISHED" << std::endl;
     return 0;
 }

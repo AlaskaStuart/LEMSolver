@@ -23,6 +23,7 @@ struct Fault
     int fault_id;
     MultiPoints2D fault_shape;
 };
+
 struct Slope
 {
 
