@@ -17,16 +17,7 @@ methods:
 output:
 - factorOfSafety: 系数安全系数
 -
-
 */
-
-// 保存极限平衡法计算所用的参数
-struct SolverConfig
-{
-    int entry_exit_points_num = 20;
-    int slips_num = 10;
-    int slices_num = 300;
-};
 
 // 保存极限平衡法计算结果
 struct SolverResult
@@ -59,7 +50,7 @@ public:
     // CustomMatrix getSlicesGeosSet() const { return slicesGeosSet_; };
     // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
-    std::map<std::tuple<int, int, int>, float> startAnalysis(std::string methodName = "ordinary");
+    std::map<std::tuple<int, int, int>, float> startAnalysis(std::string methodName = "Ordinary");
     const SolverResult getResult() const { return buildResult(); };
 
 private:

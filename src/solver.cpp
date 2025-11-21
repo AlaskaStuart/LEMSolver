@@ -17,12 +17,12 @@ void Solver::initialize()
                                                    Solver::cfg_.entry_exit_points_num);
     Solver::exitPointsSet_ = interpolatedPolyLine(exitRange_,
                                                   Solver::cfg_.entry_exit_points_num);
-    // step-3: 生成滑面
+    // step-3: 生成滑面, 圆弧型或复合型
     Solver::slipsSet_ = setSlips(Solver::entryPointsSet_,
                                  Solver::exitPointsSet_,
                                  Solver::cfg_.slips_num,
                                  Solver::slope_.slope_shape);
-    // step-4: 生成切片, 圆弧型或复合型
+    // step-4: 生成切片
     Solver::slicesGeomSet_ = setSlicesGeom(Solver::entryPointsSet_,
                                            Solver::exitPointsSet_,
                                            Solver::slipsSet_,
@@ -50,7 +50,7 @@ std::map<std::tuple<int, int, int>, float> Solver::startAnalysis(std::string met
     std::vector<Strata> stratumList = Solver::slope_.stratum;
     MatrixMap slicesStratumSet = Solver::slicesStratumSet_;
 
-    // 多线程优化
+    // TODO: 多线程优化
     for (auto &slicesWithStratum : slicesStratumSet)
     {
         auto slicesKey = slicesWithStratum.first;

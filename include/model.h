@@ -37,4 +37,6 @@ void from_json(const json &j, Slope &s);
 void from_json(const json &j, Strata &s);
 void from_json(const json &j, Fault &s);
 
+Slope readSlopeFromJson(const std::string &filename);
+
 #endif

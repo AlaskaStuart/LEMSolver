@@ -320,14 +320,14 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
     const std::vector<double> &firstSlice = slicesStratum.getCol(0);
     const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getRow(0).size() - 1);
     int leftIdx = 1;
-    while (leftIdx < firstSlice.size() && firstSlice[leftIdx] == std::nan(""))
+    while (leftIdx < firstSlice.size() && (std::isnan(firstSlice[leftIdx])))
     {
-        leftIdx++;
+        leftIdx += 1;
     }
     double beginning = firstSlice[leftIdx];
 
     int rightIdx = 1;
-    while (rightIdx < lastSlice.size() && lastSlice[rightIdx] == std::nan(""))
+    while (rightIdx < lastSlice.size() && (std::isnan(lastSlice[rightIdx])))
     {
         rightIdx++;
     }
@@ -349,15 +349,15 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
         const std::vector<double> &nextSlice = slicesStratum.getCol(sliceIdx + 1);
 
         // 找到条带底部所属的地层
-        int currBotStrataIdx = getSliceBotIndex(currentSlice);
-        int nextBotStrataIdx = getSliceBotIndex(nextSlice);
+        int currSliceBotIdx = getSliceBotIndex(currentSlice);
+        int nextSliceBotIdx = getSliceBotIndex(nextSlice);
 
-        // 获取其黏聚力和内摩擦角
-        double botStrataCohesion = stratum[currBotStrataIdx / 2 - 1].cohesion;
-        double botStrataFrictionAngle = stratum[currBotStrataIdx / 2 - 1].friction_angle;
+        // 获取切片底部所在地层的黏聚力和内摩擦角
+        double botStrataCohesion = stratum[currSliceBotIdx / 2 - 1].cohesion;
+        double botStrataFrictionAngle = stratum[currSliceBotIdx / 2 - 1].friction_angle;
 
         // 计算条带底边的长度和倾角
-        double botDy = nextSlice[nextBotStrataIdx] - currentSlice[currBotStrataIdx];
+        double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
         double botLength = std::sqrt(botDy * botDy + dx * dx);
         double botAngle = std::atan2(botDy, dx);
@@ -370,7 +370,7 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
         // 计算条块重量
         // weight = sum(dx*dy*density)
         double sliceWeight = 0.0;
-        for (int strataIdx = 0; strataIdx <= currBotStrataIdx; strataIdx++)
+        for (int strataIdx = 0; strataIdx < stratumSize; strataIdx++)
         {
             double currSliceStrataTop = currentSlice[1 + strataIdx * 2];
             double currSliceStrataBot = currentSlice[1 + strataIdx * 2 + 1];
@@ -394,8 +394,8 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
         // 摩擦力方向相反, 无推动力, 所有力参与抵抗
         if (botAngle * dir < 0)
         {
-            // 条带的抵抗力 = 条带黏聚力 -摩擦力 + 重力分量
-            sliceResistanceForce = sliceCohesionForce - sliceFriction + sliceWeight * std::sin(botAngle);
+            // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
+            sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle));
         }
         // 摩擦力方向正常
         else

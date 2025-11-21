@@ -57,3 +57,17 @@ void from_json(const json &j, Slope &s)
     if (j.contains("faults"))
         j.at("faults").get_to(s.faults);
 }
+
+Slope readSlopeFromJson(const std::string &filename)
+{
+
+    std::ifstream f(filename);
+    if (!f.is_open())
+    {
+        throw std::runtime_error("cannot open file: " + filename);
+    }
+    nlohmann::json j;
+    f >> j;
+    Slope slope = j.get<Slope>();
+    return slope;
+}

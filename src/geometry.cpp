@@ -84,11 +84,13 @@ MultiPoints2D cutFromPolyLine(const MultiPoints2D &polyline,
 std::vector<double> interpolate(double start, double end, int numPoints)
 {
     std::vector<double> result;
+    double minVal = std::min(start, end);
+    double maxVal = std::max(start, end);
 
-    double dx = (end - start) / (numPoints - 1);
+    double dx = (maxVal - minVal) / (numPoints - 1);
     for (int i = 0; i < numPoints; i++)
     {
-        double x = start + i * dx;
+        double x = minVal + i * dx;
         result.push_back(x);
     }
     return result;

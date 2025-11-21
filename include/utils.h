@@ -26,6 +26,14 @@ const double MAX_ENTRY_EXIT_LENGTH = 200;
 const double INIT_SLIP_DEPTH_FACTOR = 1.1;
 // -------------------结构体声明---------------------
 
+// 保存极限平衡法计算所用的参数
+struct SolverConfig
+{
+    int entry_exit_points_num = 3;
+    int slips_num = 1;
+    int slices_num = 10;
+};
+
 // 动态数组容器
 struct CustomMatrix
 {
