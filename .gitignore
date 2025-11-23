@@ -45,6 +45,7 @@ external/
 *.workspace
 
 # 编辑器文件
+.vs/
 .vscode/
 .idea/
 *.swp

@@ -9,6 +9,7 @@ int main()
     Slope slpDemo = readSlopeFromJson(jsonfilename);
 
     // 第二步, 创建极限平衡法计算器, 读取边坡数据
+    // 初始化
     Solver solverDemo = Solver(slpDemo);
 
     // 第三步, 开始计算
