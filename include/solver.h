@@ -35,7 +35,7 @@ struct SolverResult
 class Solver
 {
 public:
-    Solver(const Slope &slope, const SolverConfig &cfg = SolverConfig())
+    explicit Solver(const Slope &slope, const SolverConfig &cfg = SolverConfig())
         : slope_(slope), cfg_(cfg)
     {
         initialize();
@@ -50,7 +50,7 @@ public:
     // CustomMatrix getSlicesGeosSet() const { return slicesGeosSet_; };
     // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
-    std::map<std::tuple<int, int, int>, float> startAnalysis(std::string methodName = "Ordinary");
+    void startAnalysis(std::string methodName = "Ordinary");
     const SolverResult getResult() const { return buildResult(); };
 
 private:

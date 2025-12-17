@@ -1,8 +1,12 @@
 #include "solver.h"
+#include <ctime>
 
 int main()
 {
 
+    // 计时器
+    clock_t start, end;
+    start = clock();
     // 第一步, 读取json剖面文件
     std::string jsonfilename = "./data/sectionDemoNor.json";
     // json文件生成边坡数据结构体
@@ -25,5 +29,7 @@ int main()
     std::cout << fsMap.size() << std::endl;
 
     std::cout << "TEST FINISHED" << std::endl;
+    end = clock();
+    std::cout << "Time used: " << (double)(end - start) << " milliseconds" << std::endl;
     return 0;
 }

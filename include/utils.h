@@ -1,7 +1,6 @@
 #ifndef LEMSOLVER_UTILS_H
 #define LEMSOLVER_UTILS_H
 
-#pragma once
 #include <vector>
 #include <array>
 #include <map>
@@ -103,6 +102,7 @@ using json = nlohmann::json;
 
 // 动态数组容器，m*2的矩阵
 using MultiPoints2D = std::vector<std::array<double, 2>>;
+using PolyLine = std::vector<std::array<double, 3>>;
 
 // using MultiPoints3D = std::vector<std::array<double, 3>>;
 

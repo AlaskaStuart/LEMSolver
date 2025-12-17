@@ -1,7 +1,6 @@
 #ifndef LEMSOLVER_ALGORITHM_H
 #define LEMSOLVER_ALGORITHM_H
 
-// #include "utils.h"
 #include "model.h"
 #include "geometry.h"
 
@@ -17,6 +16,12 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
                    const MultiPoints2D &exitPointsSet,
                    const int &numSlips,
                    const MultiPoints2D &slopeShape);
+
+// 复合滑面
+VectorMap setSlips(const MultiPoints2D &entryPointsSet,
+                   const MultiPoints2D &exitPointsSet,
+                   const int &numSlips,
+                   const Slope &slope);
 
 // MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
 //                         const MultiPoints2D &exitPointsSet,
