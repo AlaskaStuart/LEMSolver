@@ -46,7 +46,6 @@ external/
 
 # 编辑器文件
 .vs/
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -69,12 +68,6 @@ conan.lock
 # 日志文件
 *.log
 
-# 编译输出
-build/
-*.o
-*.so
-*.dll
-*.exe
 
 # Python
 __pycache__/
@@ -86,12 +79,10 @@ env/
 venv/
 .venv/
 
-# 编辑器
-.vscode/
-.idea/
-*.swp
-*.swo
 
 # 系统
 .DS_Store
 Thumbs.db
+
+# 其他
+data/

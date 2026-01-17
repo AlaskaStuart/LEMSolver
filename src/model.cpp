@@ -61,6 +61,8 @@ void from_json(const json &j, Slope &s)
 Slope readSlopeFromJson(const std::string &filename)
 {
 
+    std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+
     std::ifstream f(filename);
     if (!f.is_open())
     {

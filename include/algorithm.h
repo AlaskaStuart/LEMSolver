@@ -6,16 +6,24 @@
 
 using FSFunc = double (*)(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
+struct CalculateInitArgs
+{
+    int stratumSize;
+    const std::vector<double> &slicesX;
+
+    // 条带宽度
+    double dx;
+    // 判断边坡坡型方向
+    double dir;
+};
+
 std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline);
 
-// VectorMap setSlips(const MultiPoints2D &entryPointsSet,
-//                    const MultiPoints2D &exitPointsSet,
-//                    const int &numSlips,
-//                    const Slope &slope);
-VectorMap setSlips(const MultiPoints2D &entryPointsSet,
-                   const MultiPoints2D &exitPointsSet,
-                   const int &numSlips,
-                   const MultiPoints2D &slopeShape);
+// 圆弧滑面
+PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
+                     const MultiPoints2D &exitPointsSet,
+                     const int &numSlips,
+                     const MultiPoints2D &slopeShape);
 
 // 复合滑面
 VectorMap setSlips(const MultiPoints2D &entryPointsSet,
@@ -30,7 +38,7 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 //                         int &slicesNum);
 MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
-                        const VectorMap &slipsSet,
+                        const PolyLineMap &slipsSet,
                         const MultiPoints2D &slopeShape,
                         int &slicesNum);
 

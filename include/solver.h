@@ -28,7 +28,7 @@ struct SolverResult
     MultiPoints2D entryPointsSet;
     MultiPoints2D exitPointsSet;
     std::map<std::tuple<int, int, int>, float> factorOfSafety;
-    VectorMap slipsSet;
+    PolyLineMap slipsSet;
     MatrixMap slicesGeomSet;
 };
 
@@ -63,7 +63,7 @@ private:
     MultiPoints2D entryPointsSet_;
     MultiPoints2D exitPointsSet_;
 
-    VectorMap slipsSet_;
+    PolyLineMap slipsSet_;
     MatrixMap slicesGeomSet_;
     MatrixMap slicesStratumSet_;
 

@@ -74,12 +74,12 @@ std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &p
 }
 
 // 每个vector的前三个元素对应的是圆弧面的
-VectorMap setSlips(const MultiPoints2D &entryPointsSet,
-                   const MultiPoints2D &exitPointsSet,
-                   const int &numSlips,
-                   const MultiPoints2D &slopeShape)
+PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
+                     const MultiPoints2D &exitPointsSet,
+                     const int &numSlips,
+                     const MultiPoints2D &slopeShape)
 {
-    VectorMap slipsMap;
+    PolyLineMap slipsMap;
     for (int i = 0; i < entryPointsSet.size(); i++)
     {
         for (int j = 0; j < exitPointsSet.size(); j++)
@@ -111,11 +111,18 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
                 int intersection = intersectionNum(cuttedPolyline, center, radius);
                 if (intersection < 3)
                 {
-                    std::vector<double> ithArcSlip;
+                    std::array<double, 3> ithArcGeom;
 
-                    ithArcSlip.push_back(center[0]);
-                    ithArcSlip.push_back(center[1]);
-                    ithArcSlip.push_back(radius);
+                    std::vector<std::array<double, 3>> ithArcSlip;
+
+                    // ithArcGeom.push_back(center[0]);
+                    // ithArcGeom.push_back(center[1]);
+                    // ithArcGeom.push_back(radius);
+                    ithArcGeom[0] = center[0];
+                    ithArcGeom[1] = center[1];
+                    ithArcGeom[2] = radius;
+
+                    ithArcSlip.push_back(ithArcGeom);
 
                     slipsMap[mapKey] = ithArcSlip;
                 }
@@ -132,7 +139,7 @@ VectorMap setSlips(const MultiPoints2D &entryPointsSet,
 // 第三行: 每个条带对应的y_bot值
 MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         const MultiPoints2D &exitPointsSet,
-                        const VectorMap &slipsSet,
+                        const PolyLineMap &slipsSet,
                         const MultiPoints2D &slopeShape,
                         int &slicesNum)
 {
@@ -149,7 +156,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
     {
         // 减少深拷贝，提升效率
         const std::tuple<int, int, int> &mapKey = slip.first;
-        const std::vector<double> &ithslip = slip.second;
+        const std::vector<std::array<double, 3>> &ithslip = slip.second;
 
         CustomMatrix ithMat(3, matrixRow);
 
@@ -184,25 +191,60 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         // | [x, yBot]-[xC, yC] | = R
         // xC, yC, R已知, 带入x可求得yBot
         // 圆弧的圆心坐标和半径
-        double slipCX = ithslip[0];
-        double slipCY = ithslip[1];
-        double slipCR = ithslip[2];
+        if (ithslip.size() == 1)
+        {
+            std::array<double, 3> ithSlipCircle = ithslip.at(0);
 
-        std::vector<double> vectorYbot(vectorX.size());
-        std::transform(vectorX.begin(),
-                       vectorX.end(),
-                       vectorYbot.begin(),
-                       [slipCX, slipCY, slipCR](double x)
-                       {
-                           return slipCY - std::sqrt(slipCR * slipCR - (slipCX - x) * (slipCX - x));
-                       });
+            double slipCX = std::get<0>(ithSlipCircle);
+            double slipCY = std::get<1>(ithSlipCircle);
+            double slipCR = std::get<2>(ithSlipCircle);
 
-        // 保存ithMat
-        ithMat.setRow(0, vectorX);
-        ithMat.setRow(1, vectorYtop);
-        ithMat.setRow(2, vectorYbot);
+            std::vector<double> vectorYbot(vectorX.size());
+            std::transform(vectorX.begin(),
+                           vectorX.end(),
+                           vectorYbot.begin(),
+                           [slipCX, slipCY, slipCR](double x)
+                           {
+                               return slipCY - std::sqrt(slipCR * slipCR - (slipCX - x) * (slipCX - x));
+                           });
 
-        results[mapKey] = ithMat;
+            // 保存ithMat
+            ithMat.setRow(0, vectorX);
+            ithMat.setRow(1, vectorYtop);
+            ithMat.setRow(2, vectorYbot);
+
+            results[mapKey] = ithMat;
+        }
+        else
+        {
+            // 复合滑面
+            for (double sliceX : vectorX)
+            {
+                int ithslipSize = ithslip.size();
+
+                for (int ithSlipPt = 0; ithSlipPt < ithslipSize - 1; ithSlipPt++)
+                {
+                    // 从左至右依此取滑面多边形上的相邻两点
+                    // 遍历计算boty值
+                    std::array<double, 3> prevPt = ithslip.at(ithSlipPt);
+                    std::array<double, 3> nextPt = ithslip.at(ithSlipPt + 1);
+
+                    if (std::get<2>(prevPt) == 0)
+                    {
+                        // use method getYbyX();
+                        std::array<double, 2> prevPt2D = {std::get<0>(prevPt), std::get<1>(prevPt)};
+                        std::array<double, 2> nextPt2D = {std::get<0>(nextPt), std::get<1>(nextPt)};
+                        MultiPoints2D pieceSlip = {prevPt2D, nextPt2D};
+
+                        double sliceY = getYbyX(pieceSlip, sliceX);
+                        if (std::isnan(sliceY))
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return results;
@@ -418,11 +460,128 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
 
 double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
-    float result = -1.0;
-    float pushingForce = 0.0;
+    double prevFS = calculateFSOrdinary(slicesStratum, stratum);
+    double result = 0.0;
 
+    int stratumSize = stratum.size();
+    const std::vector<double> &slicesX = slicesStratum.getRow(0);
+    // 条带宽度
+    double dx = slicesX[1] - slicesX[0];
+
+    // 边坡方向: 左低右高为正，左高右低为负.
+    // 找到最左边条带的顶点y值, 即入口点y值
+    // 找到最右边条带的顶点y值, 即出口点y值
+    const std::vector<double> &firstSlice = slicesStratum.getCol(0);
+    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getRow(0).size() - 1);
+    int leftIdx = 1;
+    while (leftIdx < firstSlice.size() && (std::isnan(firstSlice[leftIdx])))
+    {
+        leftIdx += 1;
+    }
+    double beginning = firstSlice[leftIdx];
+
+    int rightIdx = 1;
+    while (rightIdx < lastSlice.size() && (std::isnan(lastSlice[rightIdx])))
+    {
+        rightIdx++;
+    }
+    double ending = lastSlice[rightIdx];
+    // 最右边的y值-最左边的y值,  两者的x之差只能为正值
+    // 因此y值之差的正负决定边坡方向
+    double dir = ending - beginning;
+
+    for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
+    {
+        double pushingForce = 0.0;
+        double resistanceForce = 0.0;
+
+        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
+        {
+
+            // 条带的滑移力和抗滑移力
+            double sliceResistanceForce = 0;
+            double slicePushForce = 0;
+
+            const std::vector<double> &currentSlice = slicesStratum.getCol(sliceIdx);
+            const std::vector<double> &nextSlice = slicesStratum.getCol(sliceIdx + 1);
+
+            // 找到条带底部所属的地层
+            int currSliceBotIdx = getSliceBotIndex(currentSlice);
+            int nextSliceBotIdx = getSliceBotIndex(nextSlice);
+
+            // 获取切片底部所在地层的黏聚力和内摩擦角
+            double botStrataCohesion = stratum[currSliceBotIdx / 2 - 1].cohesion;
+            double botStrataFrictionAngle = stratum[currSliceBotIdx / 2 - 1].friction_angle;
+
+            // 计算条带底边的长度和倾角
+            double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
+
+            double botLength = std::sqrt(botDy * botDy + dx * dx);
+            double botAngle = std::atan2(botDy, dx);
+
+            // 计算条带的黏聚力、摩擦力和重力
+
+            // 1.黏聚力
+            double sliceCohesionForce = botStrataCohesion * botLength;
+
+            // 计算条块重量
+            // weight = sum(dx*dy*density)
+            double sliceWeight = 0.0;
+            for (int strataIdx = 0; strataIdx < stratumSize; strataIdx++)
+            {
+                double currSliceStrataTop = currentSlice[1 + strataIdx * 2];
+                double currSliceStrataBot = currentSlice[1 + strataIdx * 2 + 1];
+
+                if (std::isnan(currSliceStrataTop) || std::isnan(currSliceStrataBot))
+                {
+                    continue;
+                }
+                else
+                {
+                    double density = stratum[strataIdx].density;
+                    double dy = currSliceStrataTop - currSliceStrataBot;
+
+                    sliceWeight += dy * density * dx;
+                }
+            }
+            // 摩擦力
+            double sliceFriction = abs(sliceWeight * std::cos(botAngle) * std::tan(botStrataFrictionAngle));
+
+            // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
+            // 摩擦力方向相反, 无推动力, 所有力参与抵抗
+            if (botAngle * dir < 0)
+            {
+                // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
+                sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle));
+            }
+            // 摩擦力方向正常
+            else
+            {
+                // 条带的抵抗力 = 条带黏聚力 + 摩擦力
+                sliceResistanceForce = sliceCohesionForce + sliceFriction;
+
+                // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
+                slicePushForce = sliceWeight * std::sin(botAngle);
+            }
+
+            resistanceForce += sliceResistanceForce;
+            pushingForce += slicePushForce;
+        }
+
+        double currFS = resistanceForce / pushingForce;
+        if (std::abs(currFS - prevFS) < EPSILON)
+        {
+            break;
+            result = currFS;
+        }
+        else
+        {
+            prevFS = currFS;
+        }
+    }
     return result;
 }
+
 double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     float result = -1.0;

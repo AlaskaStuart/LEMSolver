@@ -16,7 +16,12 @@
 
 // 精度
 // 允许误差
-const double EPSILON = 1e-3;
+constexpr double EPSILON = 1e-3;
+// 最大迭代次数
+constexpr int INTERATION_NUM = 100;
+// 圆周率
+constexpr double PI = 3.14159265358979323846;
+constexpr double HALF_PI = PI / 2.0;
 
 // 滑裂面的入口和出口最大长度
 const double MAX_ENTRY_EXIT_LENGTH = 200;
@@ -26,6 +31,7 @@ const double INIT_SLIP_DEPTH_FACTOR = 1.1;
 // -------------------结构体声明---------------------
 
 // 保存极限平衡法计算所用的参数
+// TO-DO: 改用单例模式
 struct SolverConfig
 {
     int entry_exit_points_num = 3;
@@ -102,6 +108,7 @@ using json = nlohmann::json;
 
 // 动态数组容器，m*2的矩阵
 using MultiPoints2D = std::vector<std::array<double, 2>>;
+// 动态数组容器，m*3的矩阵
 using PolyLine = std::vector<std::array<double, 3>>;
 
 // using MultiPoints3D = std::vector<std::array<double, 3>>;
@@ -113,6 +120,8 @@ using PolyLine = std::vector<std::array<double, 3>>;
 using VectorMap = std::map<std::tuple<int, int, int>, std::vector<double>>;
 
 using MatrixMap = std::map<std::tuple<int, int, int>, CustomMatrix>;
+
+using PolyLineMap = std::map<std::tuple<int, int, int>, PolyLine>;
 
 // --------------------函数声明----------------------
 

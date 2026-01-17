@@ -165,13 +165,13 @@ std::array<double, 2> getCenter(std::array<double, 2> chordMid, double angle, do
     // 判断angle大小
     // 如果angle大于pi/2, 则取angle-pi/2
     // 如果angle小于pi/2, 则取angle+pi/2
-    if (angle > M_PI_2)
+    if (angle > HALF_PI)
     {
-        angle = angle - M_PI_2;
+        angle = angle - HALF_PI;
     }
     else
     {
-        angle = angle + M_PI_2;
+        angle = angle + HALF_PI;
     }
 
     std::array<double, 2> center;

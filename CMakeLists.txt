@@ -16,6 +16,8 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 # ===== 源文件 =====
 file(GLOB SRC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+
+file(COPY ${CMAKE_SOURCE_DIR}/data DESTINATION ${CMAKE_BINARY_DIR}/debug)
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 # ===== include 路径 =====
