@@ -6,13 +6,17 @@
 
 using FSFunc = double (*)(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
-struct CalculateInitArgs
+struct CalcuInitArgs
 {
+    // 地层数量
     int stratumSize;
+
+    // 条带的x坐标
     const std::vector<double> &slicesX;
 
     // 条带宽度
     double dx;
+
     // 判断边坡坡型方向
     double dir;
 };
@@ -44,6 +48,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
 
 MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
                            const Slope &slope);
+
+CalcuInitArgs getInitArgs(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
 double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 

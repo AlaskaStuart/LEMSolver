@@ -344,11 +344,8 @@ MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
     return results;
 }
 
-double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+CalcuInitArgs getInitArgs(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
-
-    double pushingForce = 0.0;
-    double resistanceForce = 0.0;
 
     int stratumSize = stratum.size();
     const std::vector<double> &slicesX = slicesStratum.getRow(0);
@@ -377,6 +374,17 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
     // 最右边的y值-最左边的y值,  两者的x之差只能为正值
     // 因此y值之差的正负决定边坡方向
     double dir = ending - beginning;
+
+    return {stratumSize, slicesX, dx, dir};
+}
+
+double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+{
+
+    double pushingForce = 0.0;
+    double resistanceForce = 0.0;
+
+    auto [stratumSize, slicesX, dx, dir] = getInitArgs(slicesStratum, stratum);
 
     // 沿x轴自左至右
     // 逐个条带计算重量以及条带底部的摩擦力和黏聚力。
@@ -461,34 +469,8 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
 double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     double prevFS = calculateFSOrdinary(slicesStratum, stratum);
-    double result = 0.0;
 
-    int stratumSize = stratum.size();
-    const std::vector<double> &slicesX = slicesStratum.getRow(0);
-    // 条带宽度
-    double dx = slicesX[1] - slicesX[0];
-
-    // 边坡方向: 左低右高为正，左高右低为负.
-    // 找到最左边条带的顶点y值, 即入口点y值
-    // 找到最右边条带的顶点y值, 即出口点y值
-    const std::vector<double> &firstSlice = slicesStratum.getCol(0);
-    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getRow(0).size() - 1);
-    int leftIdx = 1;
-    while (leftIdx < firstSlice.size() && (std::isnan(firstSlice[leftIdx])))
-    {
-        leftIdx += 1;
-    }
-    double beginning = firstSlice[leftIdx];
-
-    int rightIdx = 1;
-    while (rightIdx < lastSlice.size() && (std::isnan(lastSlice[rightIdx])))
-    {
-        rightIdx++;
-    }
-    double ending = lastSlice[rightIdx];
-    // 最右边的y值-最左边的y值,  两者的x之差只能为正值
-    // 因此y值之差的正负决定边坡方向
-    double dir = ending - beginning;
+    auto [stratumSize, slicesX, dx, dir] = getInitArgs(slicesStratum, stratum);
 
     for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
     {
@@ -521,10 +503,10 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
 
             // 计算条带的黏聚力、摩擦力和重力
 
-            // 1.黏聚力
-            double sliceCohesionForce = botStrataCohesion * botLength;
+            // 1. 黏聚力
+            double sliceCohesionForce = botStrataCohesion * dx;
 
-            // 计算条块重量
+            // 2. 计算条块重量
             // weight = sum(dx*dy*density)
             double sliceWeight = 0.0;
             for (int strataIdx = 0; strataIdx < stratumSize; strataIdx++)
@@ -544,21 +526,26 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
                     sliceWeight += dy * density * dx;
                 }
             }
-            // 摩擦力
-            double sliceFriction = abs(sliceWeight * std::cos(botAngle) * std::tan(botStrataFrictionAngle));
+
+            // 平衡方程中的抗滑力系数
+            double fa = abs(std::cos(botAngle)) + sin(botAngle) * std::tan(botStrataFrictionAngle) / prevFS;
+
+            // 3. 摩擦力
+            double sliceFriction = sliceWeight * std::tan(botStrataFrictionAngle);
 
             // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
             // 摩擦力方向相反, 无推动力, 所有力参与抵抗
             if (botAngle * dir < 0)
             {
                 // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
-                sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle));
+                // TODO: 这里该返回0还是继续
+                sliceResistanceForce = (sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle))) / fa;
             }
             // 摩擦力方向正常
             else
             {
                 // 条带的抵抗力 = 条带黏聚力 + 摩擦力
-                sliceResistanceForce = sliceCohesionForce + sliceFriction;
+                sliceResistanceForce = (sliceCohesionForce + sliceFriction) / fa;
 
                 // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
                 slicePushForce = sliceWeight * std::sin(botAngle);
@@ -571,24 +558,120 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
         double currFS = resistanceForce / pushingForce;
         if (std::abs(currFS - prevFS) < EPSILON)
         {
+            prevFS = currFS;
             break;
-            result = currFS;
         }
         else
         {
             prevFS = currFS;
         }
     }
-    return result;
+    return prevFS;
 }
 
 double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
-    float result = -1.0;
-    float pushingForce = 0.0;
+    double prevFS = calculateFSOrdinary(slicesStratum, stratum);
 
-    return result;
+    auto [stratumSize, slicesX, dx, dir] = getInitArgs(slicesStratum, stratum);
+
+    for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
+    {
+        double pushingForce = 0.0;
+        double resistanceForce = 0.0;
+
+        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
+        {
+
+            // 条带的滑移力和抗滑移力
+            double sliceResistanceForce = 0;
+            double slicePushForce = 0;
+
+            const std::vector<double> &currentSlice = slicesStratum.getCol(sliceIdx);
+            const std::vector<double> &nextSlice = slicesStratum.getCol(sliceIdx + 1);
+
+            // 找到条带底部所属的地层
+            int currSliceBotIdx = getSliceBotIndex(currentSlice);
+            int nextSliceBotIdx = getSliceBotIndex(nextSlice);
+
+            // 获取切片底部所在地层的黏聚力和内摩擦角
+            double botStrataCohesion = stratum[currSliceBotIdx / 2 - 1].cohesion;
+            double botStrataFrictionAngle = stratum[currSliceBotIdx / 2 - 1].friction_angle;
+
+            // 计算条带底边的长度和倾角
+            double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
+
+            double botLength = std::sqrt(botDy * botDy + dx * dx);
+            double botAngle = std::atan2(botDy, dx);
+
+            // 计算条带的黏聚力、摩擦力和重力
+
+            // 1. 黏聚力
+            double sliceCohesionForce = botStrataCohesion * dx;
+
+            // 2. 计算条块重量
+            // weight = sum(dx*dy*density)
+            double sliceWeight = 0.0;
+            for (int strataIdx = 0; strataIdx < stratumSize; strataIdx++)
+            {
+                double currSliceStrataTop = currentSlice[1 + strataIdx * 2];
+                double currSliceStrataBot = currentSlice[1 + strataIdx * 2 + 1];
+
+                if (std::isnan(currSliceStrataTop) || std::isnan(currSliceStrataBot))
+                {
+                    continue;
+                }
+                else
+                {
+                    double density = stratum[strataIdx].density;
+                    double dy = currSliceStrataTop - currSliceStrataBot;
+
+                    sliceWeight += dy * density * dx;
+                }
+            }
+
+            // 平衡方程中的抗滑力系数
+            double fa = abs(std::cos(botAngle)) + sin(botAngle) * std::tan(botStrataFrictionAngle) / prevFS;
+
+            // 3. 摩擦力
+            double sliceFriction = sliceWeight * std::tan(botStrataFrictionAngle);
+
+            // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
+            // 摩擦力方向相反, 无推动力, 所有力参与抵抗
+            if (botAngle * dir < 0)
+            {
+                // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
+                // TODO: 这里该返回0还是继续
+                sliceResistanceForce = (sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle))) / fa;
+            }
+            // 摩擦力方向正常
+            else
+            {
+                // 条带的抵抗力 = 条带黏聚力 + 摩擦力
+                sliceResistanceForce = (sliceCohesionForce + sliceFriction) / fa;
+
+                // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
+                slicePushForce = sliceWeight * std::sin(botAngle);
+            }
+
+            resistanceForce += sliceResistanceForce;
+            pushingForce += slicePushForce;
+        }
+
+        double currFS = resistanceForce / pushingForce;
+        if (std::abs(currFS - prevFS) < EPSILON)
+        {
+            prevFS = currFS;
+            break;
+        }
+        else
+        {
+            prevFS = currFS;
+        }
+    }
+    return prevFS;
 }
+
 double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     float result = -1.0;
