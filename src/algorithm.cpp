@@ -498,7 +498,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
             // 计算条带底边的长度和倾角
             double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
-            double botLength = std::sqrt(botDy * botDy + dx * dx);
+            // double botLength = std::sqrt(botDy * botDy + dx * dx);
             double botAngle = std::atan2(botDy, dx);
 
             // 计算条带的黏聚力、摩擦力和重力
@@ -573,7 +573,39 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
 {
     double prevFS = calculateFSOrdinary(slicesStratum, stratum);
 
-    auto [stratumSize, slicesX, dx, dir] = getInitArgs(slicesStratum, stratum);
+    int stratumSize = stratum.size();
+    const std::vector<double> &slicesX = slicesStratum.getRow(0);
+
+    // 条带宽度
+    double dx = slicesX[1] - slicesX[0];
+
+    // 边坡方向: 左低右高为正，左高右低为负.
+    // 找到最左边条带的顶点y值, 即入口点y值
+    // 找到最右边条带的顶点y值, 即出口点y值
+    const std::vector<double> &firstSlice = slicesStratum.getCol(0);
+    const std::vector<double> &lastSlice = slicesStratum.getCol(slicesStratum.getRow(0).size() - 1);
+    int leftIdx = 1;
+    while (leftIdx < firstSlice.size() && (std::isnan(firstSlice[leftIdx])))
+    {
+        leftIdx += 1;
+    }
+    double beginning = firstSlice[leftIdx];
+
+    int rightIdx = 1;
+    while (rightIdx < lastSlice.size() && (std::isnan(lastSlice[rightIdx])))
+    {
+        rightIdx++;
+    }
+    double ending = lastSlice[rightIdx];
+    // 最右边的y值-最左边的y值,  两者的x之差只能为正值
+    // 因此y值之差的正负决定边坡方向
+    double dir = ending - beginning;
+
+    double dirDx = slicesX[-1] - slicesX[0];
+
+    double chord = std::sqrt(dirDx * dirDx + dx * dx);
+    // TODO: 计算一个点到直线的距离
+    // 必要时候需要将代码提出成为方法，而且还要使用using 来表示point
 
     for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
     {
@@ -601,7 +633,7 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
             // 计算条带底边的长度和倾角
             double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
-            double botLength = std::sqrt(botDy * botDy + dx * dx);
+            // double botLength = std::sqrt(botDy * botDy + dx * dx);
             double botAngle = std::atan2(botDy, dx);
 
             // 计算条带的黏聚力、摩擦力和重力
@@ -631,7 +663,7 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
             }
 
             // 平衡方程中的抗滑力系数
-            double fa = abs(std::cos(botAngle)) + sin(botAngle) * std::tan(botStrataFrictionAngle) / prevFS;
+            double fa = (std::cos(botAngle) * std::cos(botAngle) * (1 + std::tan(botAngle) * std::tan(botStrataFrictionAngle))) / prevFS;
 
             // 3. 摩擦力
             double sliceFriction = sliceWeight * std::tan(botStrataFrictionAngle);
@@ -651,12 +683,16 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
                 sliceResistanceForce = (sliceCohesionForce + sliceFriction) / fa;
 
                 // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
-                slicePushForce = sliceWeight * std::sin(botAngle);
+                slicePushForce = sliceWeight * std::tan(botAngle);
             }
 
             resistanceForce += sliceResistanceForce;
             pushingForce += slicePushForce;
         }
+
+        double correctionB1 = 0.5;
+        double correctionDratioL = 0;
+        double correctionF0 = 1 + correctionB1 * (correctionDratioL - 1.4 * correctionDratioL * correctionDratioL);
 
         double currFS = resistanceForce / pushingForce;
         if (std::abs(currFS - prevFS) < EPSILON)
