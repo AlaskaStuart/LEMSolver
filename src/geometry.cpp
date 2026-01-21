@@ -1,14 +1,40 @@
 #include "geometry.h"
 
-std::array<double, 2> getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint)
+Point2D getMidPoint(Point2D &entryPoint, Point2D &exitPoint)
 {
 
-    return {0.5 * (entryPoint[0] + exitPoint[0]), 0.5 * (entryPoint[1] + exitPoint[1])};
+    // return {0.5 * (entryPoint[0] + exitPoint[0]), 0.5 * (entryPoint[1] + exitPoint[1])};
+    return (entryPoint + exitPoint) * 0.5;
 }
 
 double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &entryPoint)
 {
     return std::sqrt(std::pow(exitPoint[0] - entryPoint[0], 2) + std::pow(exitPoint[1] - entryPoint[1], 2));
+}
+
+// 返回结果：t和dist
+// t为投影至线段上的比例，dist为点P到其投影点（垂足）的距离
+// 如果t<0：投影点在A外侧
+// 如果t>0：投影点在B外侧
+// 如果0<t<1：投影点在线段AB上
+std::pair<double, double> calculateDistToPolyline(Point2D &ptP, Point2D &ptA, Point2D &ptB)
+{
+    Point2D AB = ptB - ptA;
+    Point2D AP = ptP - ptA;
+    double ab2 = dot(AB, AB);
+
+    double segmentLen = calculateLength(ptA, ptB);
+
+    if (segmentLen == 0)
+    {
+        return {0, length(ptP - ptA)};
+    }
+
+    // 计算投影比例 t
+    // t = [(P-A) . (B-A)] / |B-A|^2
+    double t = dot(AP, AB) / ab2;
+    Point2D ptQ = ptA + AB * t;
+    return {t, length(ptP - ptQ)};
 }
 
 // 根据指定的起始点和终止点截取折线段, 需要以指定的起始点开始, 指定的终止点结束

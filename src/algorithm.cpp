@@ -603,9 +603,15 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
 
     double dirDx = slicesX[-1] - slicesX[0];
 
-    double chord = std::sqrt(dirDx * dirDx + dx * dx);
+    // double chord = std::sqrt(dirDx * dirDx + dx * dx);
     // TODO: 计算一个点到直线的距离
     // 必要时候需要将代码提出成为方法，而且还要使用using 来表示point
+
+    std::array<double, 2> entryPoint = {slicesX[0], beginning};
+    std::array<double, 2> exitPoint = {slicesX[-1], ending};
+
+    double chordLen = calculateLength(entryPoint, exitPoint);
+    double maxChordToSlip = 0;
 
     for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
     {
@@ -632,6 +638,13 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
 
             // 计算条带底边的长度和倾角
             double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
+
+            double botY = (nextSlice[nextSliceBotIdx] + currentSlice[currSliceBotIdx]) / 2;
+            Point2D ptBot = {slicesX[sliceIdx] + dx / 2, botY};
+
+            double chordToSlip = calculateDistToPolyline(ptBot, entryPoint, exitPoint).second;
+
+            maxChordToSlip = std::max(maxChordToSlip, chordToSlip);
 
             // double botLength = std::sqrt(botDy * botDy + dx * dx);
             double botAngle = std::atan2(botDy, dx);
@@ -691,10 +704,10 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
         }
 
         double correctionB1 = 0.5;
-        double correctionDratioL = 0;
+        double correctionDratioL = maxChordToSlip / chordLen;
         double correctionF0 = 1 + correctionB1 * (correctionDratioL - 1.4 * correctionDratioL * correctionDratioL);
 
-        double currFS = resistanceForce / pushingForce;
+        double currFS = correctionF0 * resistanceForce / pushingForce;
         if (std::abs(currFS - prevFS) < EPSILON)
         {
             prevFS = currFS;

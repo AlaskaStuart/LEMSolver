@@ -106,8 +106,6 @@ public:
 // json模块
 using json = nlohmann::json;
 
-// 动态数组容器，m*2的矩阵
-using MultiPoints2D = std::vector<std::array<double, 2>>;
 // 动态数组容器，m*3的矩阵
 using PolyLine = std::vector<std::array<double, 3>>;
 

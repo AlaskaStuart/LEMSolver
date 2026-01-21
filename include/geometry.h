@@ -3,9 +3,41 @@
 
 #include "utils.h"
 
-std::array<double, 2> getMidPoint(std::array<double, 2> &entryPoint, std::array<double, 2> &exitPoint);
+// 二维单点
+using Point2D = std::array<double, 2>;
+
+Point2D operator+(const Point2D &a, const Point2D &b)
+{
+    return {a[0] + b[0], a[1] + b[1]};
+}
+
+Point2D operator-(const Point2D &a, const Point2D &b)
+{
+    return {a[0] - b[0], a[1] - b[1]};
+}
+
+Point2D operator*(const Point2D &v, double s)
+{
+    return {v[0] * s, v[1] * s};
+}
+
+double dot(const Point2D &a, const Point2D &b)
+{
+    return a[0] * b[0] + a[1] * b[1];
+}
+
+double length(const Point2D &v)
+{
+    return std::sqrt(dot(v, v));
+}
+// 二维多点
+using MultiPoints2D = std::vector<Point2D>;
+
+Point2D getMidPoint(Point2D &entryPoint, Point2D &exitPoint);
 
 double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &entryPoint);
+
+std::pair<double, double> calculateDistToPolyline(Point2D &ptP, Point2D &ptA, Point2D &ptB);
 
 MultiPoints2D cutFromPolyLine(const MultiPoints2D &polyline,
                               std::array<double, 2> startPoint,
