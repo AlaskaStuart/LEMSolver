@@ -167,15 +167,6 @@ MultiPoints2D interpolatedPolyLine(const MultiPoints2D &polyline, int numPoints)
     return result;
 }
 
-// 根据弦长和弦度，计算圆周到弦的距离
-// double calculateCircumToChordDist(double chord, double chordAngle)
-// {
-//     double radius = chord / (2.0 * std::cos(chordAngle));
-//     double chordToCircum = std::sqrt(radius * radius - (chord / 2.0) * (chord / 2.0));
-//     return chordToCircum;
-// }
-// chordToCircum = 2*chord*std::tan(horizontalAngle);
-
 // 圆内任意两个弦AB,CD相交于点O,则
 // AO*BO = CO *DO
 // (2*R-chordToCircum)*chordToCircum = chord/2 * chord/2
@@ -364,31 +355,6 @@ int intersectionNum(const MultiPoints2D &polyline,
     }
 }
 
-// double calculateAreaOfQuad(const MultiPoints2D &pts)
-// {
-//     // 要求输入 4 个点
-//     if (pts.size() != 4)
-//         throw std::runtime_error("calculate the area of Quad requires exactly 4 points.");
-
-//     // shoelace formula:
-//     // area = 1/2 * Σ (x_i * y_(i+1) - x_(i+1) * y_i)
-//     double sum = 0.0;
-
-//     for (size_t i = 0; i < 4; ++i)
-//     {
-//         size_t j = (i + 1) % 4; // 下一个点（最后一个点的下一个是点0）
-
-//         double xi = pts[i][0];
-//         double yi = pts[i][1];
-//         double xj = pts[j][0];
-//         double yj = pts[j][1];
-
-//         sum += (xi * yj - xj * yi);
-//     }
-
-//     return std::abs(sum) / 2.0;
-// }
-
 double getYbyX(const MultiPoints2D &polyline, double x)
 {
     double result = std::nan(""); // 初始化为NaN
@@ -413,4 +379,52 @@ double getYbyX(const MultiPoints2D &polyline, double x)
     }
 
     return result;
+}
+
+std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, const Point2D &C, const Point2D &D)
+{
+    Point2D r = B - A;
+    Point2D s = D - C;
+
+    double denom = cross(r, s);
+    // 平行或共线
+    if (std::abs(denom) < EPSILON)
+        return std::nullopt;
+
+    double t = cross(C - A, s) / denom;
+    double u = cross(C - A, r) / denom;
+
+    // 相交点,在线段内
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+    {
+        return A + r * t;
+    }
+    return std::nullopt;
+}
+
+// 使用递归重写
+
+std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLineNoArc &P, const PolyLineNoArc &Q)
+{
+    PolyLineNoArc upperPolyLine;
+
+    for (size_t i = 0; i + 1 < P.size(); i++)
+    {
+        for (size_t j = 0; j + 1 < Q.size(); j++)
+        {
+            Point2D p1 = {P[i][0], P[i][1]};
+            Point2D p2 = {P[i + 1][0], P[i + 1][1]};
+            Point2D q1 = {Q[i][0], Q[i][1]};
+            Point2D q2 = {Q[i + 1][0], Q[i + 1][1]};
+            auto intersection = segmentIntersection(p1, p2, q1, q2);
+            if (intersection)
+            {
+                // std::array<double, 3> intersectionWithRadius = {std::get<0>(intersection), std::get<1>(intersection), 0};
+                // auto temp = {intersection[0], intersection[1]};
+                upperPolyLine.push_back(*intersection);
+            }
+        }
+    }
+
+    return;
 }

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
+#include <optional>
 #include <nlohmann/json.hpp>
 
 // --------------------常量定义----------------------
@@ -28,6 +29,7 @@ const double MAX_ENTRY_EXIT_LENGTH = 200;
 
 // 初始圆弧滑面深度，数值越大，圆弧越深
 const double INIT_SLIP_DEPTH_FACTOR = 1.1;
+
 // -------------------结构体声明---------------------
 
 // 保存极限平衡法计算所用的参数
@@ -106,8 +108,48 @@ public:
 // json模块
 using json = nlohmann::json;
 
+// 二维单点
+using Point2D = std::array<double, 2>;
+
+Point2D operator+(const Point2D &a, const Point2D &b)
+{
+    return {a[0] + b[0], a[1] + b[1]};
+}
+
+Point2D operator-(const Point2D &a, const Point2D &b)
+{
+    return {a[0] - b[0], a[1] - b[1]};
+}
+
+Point2D operator*(const Point2D &v, double s)
+{
+    return {v[0] * s, v[1] * s};
+}
+
+double dot(const Point2D &a, const Point2D &b)
+{
+    return a[0] * b[0] + a[1] * b[1];
+}
+
+double cross(const Point2D &a, const Point2D &b)
+{
+    return a[0] * b[1] - a[1] * b[0];
+}
+
+double length(const Point2D &v)
+{
+    return std::sqrt(dot(v, v));
+}
+
+// 二维多点
+using MultiPoints2D = std::vector<Point2D>;
+
 // 动态数组容器，m*3的矩阵
+// 前两列是x、y坐标，第三列是弧度，如果是直线段，则为0；如果是弧线，按照cad多线段计算方式表示
 using PolyLine = std::vector<std::array<double, 3>>;
+
+// 常规折线段
+using PolyLineNoArc = std::vector<std::array<double, 2>>;
 
 // using MultiPoints3D = std::vector<std::array<double, 3>>;
 

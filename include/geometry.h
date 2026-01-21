@@ -3,36 +3,6 @@
 
 #include "utils.h"
 
-// 二维单点
-using Point2D = std::array<double, 2>;
-
-Point2D operator+(const Point2D &a, const Point2D &b)
-{
-    return {a[0] + b[0], a[1] + b[1]};
-}
-
-Point2D operator-(const Point2D &a, const Point2D &b)
-{
-    return {a[0] - b[0], a[1] - b[1]};
-}
-
-Point2D operator*(const Point2D &v, double s)
-{
-    return {v[0] * s, v[1] * s};
-}
-
-double dot(const Point2D &a, const Point2D &b)
-{
-    return a[0] * b[0] + a[1] * b[1];
-}
-
-double length(const Point2D &v)
-{
-    return std::sqrt(dot(v, v));
-}
-// 二维多点
-using MultiPoints2D = std::vector<Point2D>;
-
 Point2D getMidPoint(Point2D &entryPoint, Point2D &exitPoint);
 
 double calculateLength(std::array<double, 2> &exitPoint, std::array<double, 2> &entryPoint);
@@ -64,5 +34,13 @@ int intersectionNum(const MultiPoints2D &polyline,
                     double radius);
 
 double getYbyX(const MultiPoints2D &polyline, double x);
+
+std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, const Point2D &C, const Point2D &D);
+
+// 不带曲率的折线相交
+std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLineNoArc &P, const PolyLineNoArc &Q);
+
+// 带曲率的折线相交
+// std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLine &P, const PolyLine &Q);
 
 #endif

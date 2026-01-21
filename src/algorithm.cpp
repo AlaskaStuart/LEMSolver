@@ -132,6 +132,26 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
     return slipsMap;
 }
 
+PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
+                     const MultiPoints2D &exitPointsSet,
+                     const int &numSlips,
+                     const Slope &slope)
+{
+    PolyLineMap results;
+
+    if (slope.faults.empty())
+    {
+        return setSlips(entryPointsSet, exitPointsSet, numSlips, slope.slope_shape);
+    }
+    else
+    {
+        // TODO:
+    }
+
+    return results;
+}
+// TODO 如果slipsSet第三列有一个值不为零，则说明是复合滑面
+
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
 // 分割条带是个二维数组, shape = (3,slicesNum)
 // 第一行: 每个条带对应的x值

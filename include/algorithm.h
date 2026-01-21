@@ -30,10 +30,10 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                      const MultiPoints2D &slopeShape);
 
 // 复合滑面
-VectorMap setSlips(const MultiPoints2D &entryPointsSet,
-                   const MultiPoints2D &exitPointsSet,
-                   const int &numSlips,
-                   const Slope &slope);
+PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
+                     const MultiPoints2D &exitPointsSet,
+                     const int &numSlips,
+                     const Slope &slope);
 
 // MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
 //                         const MultiPoints2D &exitPointsSet,
