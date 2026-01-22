@@ -402,11 +402,47 @@ std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, c
     return std::nullopt;
 }
 
-// 使用递归重写
-
-std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLineNoArc &P, const PolyLineNoArc &Q)
+// 生成两个折线段相交之后、位于相交点以上部分的折线段。
+// 返回结果：如果两个线段，相交点之上部分线段合并后的折线段
+// 如果两个线段不相交，则返回结果是平均y值较大的折线段
+std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q)
 {
-    PolyLineNoArc upperPolyLine;
+    PolyLineCAD upperPolyLine;
+    MultiPoints2D intersectionPt;
+
+    if (P.size() == 1 and Q.size() > 1)
+    {
+        if (P.front()[1] > (Q.front()[1]))
+        {
+            return P;
+        }
+        else
+        {
+            return Q;
+        }
+    }
+    else if (Q.size() == 1 and P.size() > 1)
+    {
+        if (Q.front()[1] > (P.front()[1]))
+        {
+            return Q;
+        }
+        else
+        {
+            return P;
+        }
+    }
+    else if (Q.size() == 1 and P.size() == 1)
+    {
+        if (P.front()[1] > (Q.front()[1]))
+        {
+            return P;
+        }
+        else
+        {
+            return Q;
+        }
+    }
 
     for (size_t i = 0; i + 1 < P.size(); i++)
     {
@@ -414,17 +450,63 @@ std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLineNoArc &P, con
         {
             Point2D p1 = {P[i][0], P[i][1]};
             Point2D p2 = {P[i + 1][0], P[i + 1][1]};
-            Point2D q1 = {Q[i][0], Q[i][1]};
-            Point2D q2 = {Q[i + 1][0], Q[i + 1][1]};
+            Point2D q1 = {Q[j][0], Q[j][1]};
+            Point2D q2 = {Q[j + 1][0], Q[j + 1][1]};
             auto intersection = segmentIntersection(p1, p2, q1, q2);
             if (intersection)
             {
-                // std::array<double, 3> intersectionWithRadius = {std::get<0>(intersection), std::get<1>(intersection), 0};
-                // auto temp = {intersection[0], intersection[1]};
-                upperPolyLine.push_back(*intersection);
+                const Point2D &temp2D = intersection.value();
+
+                intersectionPt.push_back(temp2D);
+
+                if (P[i][1] > Q[j][1])
+                {
+                    upperPolyLine.insert(upperPolyLine.end(), P.begin(), P.begin() + i);
+                    upperPolyLine.push_back({temp2D[0], temp2D[1], 0});
+                }
+                else if (Q[j][1] > P[i][1])
+                {
+                    upperPolyLine.insert(upperPolyLine.end(), Q.begin(), Q.begin() + j);
+                    upperPolyLine.push_back({temp2D[0], temp2D[1], 0});
+                }
+
+                MultiPoints2D rightHalfP;
+                MultiPoints2D rightHalfQ;
+                rightHalfP.insert(rightHalfP.end(), P.begin() + i + 1, P.end());
+                rightHalfQ.insert(rightHalfQ.end(), Q.begin() + j + 1, Q.end());
+
+                std::optional<PolyLineCAD> nextPartIntersection = getUpperPolyLineIntersection(rightHalfP, rightHalfQ);
+                if (nextPartIntersection)
+                {
+                    upperPolyLine.insert(upperPolyLine.end(), nextPartIntersection.value().begin(), nextPartIntersection.value().end());
+                }
+                break;
             }
         }
     }
 
-    return;
+    if (intersectionPt.size() == 0)
+    {
+
+        Point2D P_begin = {P.front()[0], P.front()[1]};
+        Point2D Q_begin = {Q.front()[0], Q.front()[1]};
+
+        if (length(P_begin) > length(Q_begin))
+        {
+            return P;
+        }
+        else
+        {
+            return Q;
+        }
+    }
+
+    return upperPolyLine;
+}
+
+std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q)
+{
+    PolyLineCAD upperBound;
+
+    return upperBound;
 }

@@ -4,6 +4,7 @@
 // #include "utils.h"
 #include "model.h"
 #include "algorithm.h"
+#include "settings.h"
 
 /*
 args:

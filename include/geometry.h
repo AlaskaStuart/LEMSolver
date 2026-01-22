@@ -2,6 +2,7 @@
 #define LEMSOLVER_GEOMETRY_H
 
 #include "utils.h"
+#include "settings.h"
 
 Point2D getMidPoint(Point2D &entryPoint, Point2D &exitPoint);
 
@@ -38,9 +39,9 @@ double getYbyX(const MultiPoints2D &polyline, double x);
 std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, const Point2D &C, const Point2D &D);
 
 // 不带曲率的折线相交
-std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLineNoArc &P, const PolyLineNoArc &Q);
+std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q);
 
-// 带曲率的折线相交
-// std::optional<PolyLine> getUpperPolyLineIntersection(const PolyLine &P, const PolyLine &Q);
+// 折线与圆弧段相交
+std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q);
 
 #endif

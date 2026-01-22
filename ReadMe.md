@@ -9,9 +9,12 @@
   flowchart TD
       A["utils.h"] --> B["model.h"]
       A --> C["geometry.h"]
+      F["settings.h"] -->C
       B --> D["algorithm.h"]
+      F["settings.h"] -->D
       C --> D
       D -->E["sovler.h"]
+      F["settings.h"] -->E
 
 ```
 

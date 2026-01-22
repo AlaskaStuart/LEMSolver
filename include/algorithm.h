@@ -3,6 +3,7 @@
 
 #include "model.h"
 #include "geometry.h"
+#include "settings.h"
 
 using FSFunc = double (*)(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 

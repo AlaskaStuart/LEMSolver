@@ -15,31 +15,11 @@
 
 // --------------------常量定义----------------------
 
-// 精度
-// 允许误差
-constexpr double EPSILON = 1e-3;
-// 最大迭代次数
-constexpr int INTERATION_NUM = 100;
 // 圆周率
 constexpr double PI = 3.14159265358979323846;
 constexpr double HALF_PI = PI / 2.0;
 
-// 滑裂面的入口和出口最大长度
-const double MAX_ENTRY_EXIT_LENGTH = 200;
-
-// 初始圆弧滑面深度，数值越大，圆弧越深
-const double INIT_SLIP_DEPTH_FACTOR = 1.1;
-
 // -------------------结构体声明---------------------
-
-// 保存极限平衡法计算所用的参数
-// TO-DO: 改用单例模式
-struct SolverConfig
-{
-    int entry_exit_points_num = 3;
-    int slips_num = 1;
-    int slices_num = 10;
-};
 
 // 动态数组容器
 struct CustomMatrix
@@ -111,6 +91,29 @@ using json = nlohmann::json;
 // 二维单点
 using Point2D = std::array<double, 2>;
 
+// 二维多点, 也可以表示折线段
+using MultiPoints2D = std::vector<Point2D>;
+
+// 动态数组容器，m*3的矩阵
+// 前两列是x、y坐标，第三列是弧度，如果是直线段，则为0；如果是弧线，按照cad多线段计算方式表示
+// using PolyLine = std::vector<std::array<double, 3>>;
+using PolyLineCAD = std::vector<std::array<double, 3>>;
+
+// 常规折线段
+using PolyLineNoArc = std::vector<std::array<double, 2>>;
+
+// 存放可变长度元素的字典
+// 应用场景：复合滑面(每个滑面是多段线，个数不可知)
+// 索引为 (i, j, k), 对应 (破坏点入口编号, 破坏点出口编号, 划裂面编号)
+// 值是一个向量，前三个元素分别为圆弧的圆心和半径(Rx, Ry, R)
+using VectorMap = std::map<std::tuple<int, int, int>, std::vector<double>>;
+
+using MatrixMap = std::map<std::tuple<int, int, int>, CustomMatrix>;
+
+using PolyLineMap = std::map<std::tuple<int, int, int>, PolyLineCAD>;
+
+// --------------------函数声明----------------------
+
 Point2D operator+(const Point2D &a, const Point2D &b)
 {
     return {a[0] + b[0], a[1] + b[1]};
@@ -140,30 +143,6 @@ double length(const Point2D &v)
 {
     return std::sqrt(dot(v, v));
 }
-
-// 二维多点
-using MultiPoints2D = std::vector<Point2D>;
-
-// 动态数组容器，m*3的矩阵
-// 前两列是x、y坐标，第三列是弧度，如果是直线段，则为0；如果是弧线，按照cad多线段计算方式表示
-using PolyLine = std::vector<std::array<double, 3>>;
-
-// 常规折线段
-using PolyLineNoArc = std::vector<std::array<double, 2>>;
-
-// using MultiPoints3D = std::vector<std::array<double, 3>>;
-
-// 存放可变长度元素的字典
-// 应用场景：复合滑面(每个滑面是多段线，个数不可知)
-// 索引为 (i, j, k), 对应 (破坏点入口编号, 破坏点出口编号, 划裂面编号)
-// 值是一个向量，前三个元素分别为圆弧的圆心和半径(Rx, Ry, R)
-using VectorMap = std::map<std::tuple<int, int, int>, std::vector<double>>;
-
-using MatrixMap = std::map<std::tuple<int, int, int>, CustomMatrix>;
-
-using PolyLineMap = std::map<std::tuple<int, int, int>, PolyLine>;
-
-// --------------------函数声明----------------------
 
 // 打印多边形的线条
 void printPolyLine(const MultiPoints2D &poly);
