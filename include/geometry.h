@@ -33,15 +33,19 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
 int intersectionNum(const MultiPoints2D &polyline,
                     const std::array<double, 2> &center,
                     double radius);
+std::optional<std::pair<int, PolyLineCAD>> polyLineCADIntersection(const PolyLineCAD &P, PolyLineCAD &Q);
 
 double getYbyX(const MultiPoints2D &polyline, double x);
 
 std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, const Point2D &C, const Point2D &D);
 
 // 不带曲率的折线相交
-std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q);
+// @deprecated
+// 可能引发bug
+// 放弃了
+// std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q);
 
 // 折线与圆弧段相交
-std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q);
+// std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q);
 
 #endif

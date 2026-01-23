@@ -74,6 +74,9 @@ std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &p
 }
 
 // 每个vector的前三个元素对应的是圆弧面的
+// 普通圆弧滑面
+// 存储的是 圆心坐标、半径
+// vector长度为1
 PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                      const MultiPoints2D &exitPointsSet,
                      const int &numSlips,
@@ -108,6 +111,7 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                 // 验证是否有交点
                 // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
                 MultiPoints2D cuttedPolyline = cutFromPolyLine(slopeShape, entryPoint, exitPoint);
+                // TODO: 将center,radius, entryPoint, exitPoint聚合成PolyLinCAD
                 int intersection = intersectionNum(cuttedPolyline, center, radius);
                 if (intersection < 3)
                 {
@@ -132,6 +136,9 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
     return slipsMap;
 }
 
+// TODO: 复合滑面
+// 存储的是CAD版本的多线段
+// vector长度不唯一
 PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                      const MultiPoints2D &exitPointsSet,
                      const int &numSlips,
@@ -146,11 +153,15 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
     else
     {
         // TODO:
+        // 软弱层和断层、圆弧滑面、边坡表面
+        // 需要
     }
 
     return results;
 }
-// TODO 如果slipsSet第三列有一个值不为零，则说明是复合滑面
+
+// TODO: 如果slipsSet第三列有一个值不为零，则说明是复合滑面
+// 如果是复合滑面，该怎么切割slices
 
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
 // 分割条带是个二维数组, shape = (3,slicesNum)
@@ -176,7 +187,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
     {
         // 减少深拷贝，提升效率
         const std::tuple<int, int, int> &mapKey = slip.first;
-        const std::vector<std::array<double, 3>> &ithslip = slip.second;
+        const PolyLineCAD &ithslip = slip.second;
+        // const std::vector<std::array<double, 3>> &ithslip = slip.second;
 
         CustomMatrix ithMat(3, matrixRow);
 
@@ -623,10 +635,6 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
 
     double dirDx = slicesX[-1] - slicesX[0];
 
-    // double chord = std::sqrt(dirDx * dirDx + dx * dx);
-    // TODO: 计算一个点到直线的距离
-    // 必要时候需要将代码提出成为方法，而且还要使用using 来表示point
-
     std::array<double, 2> entryPoint = {slicesX[0], beginning};
     std::array<double, 2> exitPoint = {slicesX[-1], ending};
 
@@ -748,6 +756,7 @@ double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata>
 
     return result;
 }
+
 double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     float result = -1.0;

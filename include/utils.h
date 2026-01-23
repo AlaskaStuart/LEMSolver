@@ -99,9 +99,6 @@ using MultiPoints2D = std::vector<Point2D>;
 // using PolyLine = std::vector<std::array<double, 3>>;
 using PolyLineCAD = std::vector<std::array<double, 3>>;
 
-// 常规折线段
-using PolyLineNoArc = std::vector<std::array<double, 2>>;
-
 // 存放可变长度元素的字典
 // 应用场景：复合滑面(每个滑面是多段线，个数不可知)
 // 索引为 (i, j, k), 对应 (破坏点入口编号, 破坏点出口编号, 划裂面编号)

@@ -28,7 +28,7 @@ struct SolverResult
     MultiPoints2D exitRange;
     MultiPoints2D entryPointsSet;
     MultiPoints2D exitPointsSet;
-    std::map<std::tuple<int, int, int>, float> factorOfSafety;
+    std::map<std::tuple<int, int, int>, double> factorOfSafety;
     PolyLineMap slipsSet;
     MatrixMap slicesGeomSet;
 };
@@ -68,7 +68,7 @@ private:
     MatrixMap slicesGeomSet_;
     MatrixMap slicesStratumSet_;
 
-    std::map<std::tuple<int, int, int>, float> factorOfSafety_;
+    std::map<std::tuple<int, int, int>, double> factorOfSafety_;
 
     void initialize();
 

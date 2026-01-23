@@ -405,108 +405,130 @@ std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, c
 // 生成两个折线段相交之后、位于相交点以上部分的折线段。
 // 返回结果：如果两个线段，相交点之上部分线段合并后的折线段
 // 如果两个线段不相交，则返回结果是平均y值较大的折线段
-std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q)
-{
-    PolyLineCAD upperPolyLine;
-    MultiPoints2D intersectionPt;
+// 考虑的是，可能相交点不止一个，这种情况下尾段不知道该怎么处理
+// 而且如果不相交，这两个折线段的上下关系不好判定，阶段性放弃
+// @deprecated
+// 可能引发bug
+// std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q)
+// {
+//     PolyLineCAD upperPolyLine;
+//     MultiPoints2D intersectionPt;
 
-    if (P.size() == 1 and Q.size() > 1)
-    {
-        if (P.front()[1] > (Q.front()[1]))
-        {
-            return P;
-        }
-        else
-        {
-            return Q;
-        }
-    }
-    else if (Q.size() == 1 and P.size() > 1)
-    {
-        if (Q.front()[1] > (P.front()[1]))
-        {
-            return Q;
-        }
-        else
-        {
-            return P;
-        }
-    }
-    else if (Q.size() == 1 and P.size() == 1)
-    {
-        if (P.front()[1] > (Q.front()[1]))
-        {
-            return P;
-        }
-        else
-        {
-            return Q;
-        }
-    }
+//     // if ((P.size() == 1) || (Q.size() == 1))
+//     // {
 
-    for (size_t i = 0; i + 1 < P.size(); i++)
-    {
-        for (size_t j = 0; j + 1 < Q.size(); j++)
-        {
-            Point2D p1 = {P[i][0], P[i][1]};
-            Point2D p2 = {P[i + 1][0], P[i + 1][1]};
-            Point2D q1 = {Q[j][0], Q[j][1]};
-            Point2D q2 = {Q[j + 1][0], Q[j + 1][1]};
-            auto intersection = segmentIntersection(p1, p2, q1, q2);
-            if (intersection)
-            {
-                const Point2D &temp2D = intersection.value();
+//     // }
 
-                intersectionPt.push_back(temp2D);
+//     // if (P.size() == 1 and Q.size() > 1)
+//     // {
+//     //     if (P.front()[1] > (Q.front()[1]))
+//     //     {
+//     //         return P;
+//     //     }
+//     //     else
+//     //     {
+//     //         return Q;
+//     //     }
+//     // }
+//     // else if (Q.size() == 1 and P.size() > 1)
+//     // {
+//     //     if (Q.front()[1] > (P.front()[1]))
+//     //     {
+//     //         return Q;
+//     //     }
+//     //     else
+//     //     {
+//     //         return P;
+//     //     }
+//     // }
+//     // else if (Q.size() == 1 and P.size() == 1)
+//     // {
+//     //     if (P.front()[1] > (Q.front()[1]))
+//     //     {
+//     //         return P;
+//     //     }
+//     //     else
+//     //     {
+//     //         return Q;
+//     //     }
+//     // }
 
-                if (P[i][1] > Q[j][1])
-                {
-                    upperPolyLine.insert(upperPolyLine.end(), P.begin(), P.begin() + i);
-                    upperPolyLine.push_back({temp2D[0], temp2D[1], 0});
-                }
-                else if (Q[j][1] > P[i][1])
-                {
-                    upperPolyLine.insert(upperPolyLine.end(), Q.begin(), Q.begin() + j);
-                    upperPolyLine.push_back({temp2D[0], temp2D[1], 0});
-                }
+//     for (size_t i = 0; i + 1 < P.size(); i++)
+//     {
+//         for (size_t j = 0; j + 1 < Q.size(); j++)
+//         {
+//             Point2D p1 = P[i];
+//             Point2D p2 = P[i + 1];
 
-                MultiPoints2D rightHalfP;
-                MultiPoints2D rightHalfQ;
-                rightHalfP.insert(rightHalfP.end(), P.begin() + i + 1, P.end());
-                rightHalfQ.insert(rightHalfQ.end(), Q.begin() + j + 1, Q.end());
+//             Point2D q1 = Q[j];
+//             Point2D q2 = Q[j + 1];
 
-                std::optional<PolyLineCAD> nextPartIntersection = getUpperPolyLineIntersection(rightHalfP, rightHalfQ);
-                if (nextPartIntersection)
-                {
-                    upperPolyLine.insert(upperPolyLine.end(), nextPartIntersection.value().begin(), nextPartIntersection.value().end());
-                }
-                break;
-            }
-        }
-    }
+//             auto intersection = segmentIntersection(p1, p2, q1, q2);
+//             if (intersection)
+//             {
+//                 const Point2D &intersectionVal = intersection.value();
 
-    if (intersectionPt.size() == 0)
-    {
+//                 intersectionPt.push_back(intersectionVal);
 
-        Point2D P_begin = {P.front()[0], P.front()[1]};
-        Point2D Q_begin = {Q.front()[0], Q.front()[1]};
+//                 if (p1[1] > q1[1])
+//                 {
+//                     upperPolyLine.insert(upperPolyLine.end(), P.begin(), P.begin() + i);
+//                     upperPolyLine.push_back({intersection.value()[0], intersectionVal[1], 0});
+//                 }
+//                 else if (q1[1] > p1[1])
+//                 {
+//                     upperPolyLine.insert(upperPolyLine.end(), Q.begin(), Q.begin() + j);
+//                     upperPolyLine.push_back({intersectionVal[0], intersectionVal[1], 0});
+//                 }
 
-        if (length(P_begin) > length(Q_begin))
-        {
-            return P;
-        }
-        else
-        {
-            return Q;
-        }
-    }
+//                 MultiPoints2D rightHalfP;
+//                 MultiPoints2D rightHalfQ;
+//                 rightHalfP.insert(rightHalfP.end(), P.begin() + i + 1, P.end());
+//                 rightHalfQ.insert(rightHalfQ.end(), Q.begin() + j + 1, Q.end());
 
-    return upperPolyLine;
-}
+//                 std::optional<PolyLineCAD> nextPartIntersection = getUpperPolyLineIntersection(rightHalfP, rightHalfQ);
+//                 if (nextPartIntersection)
+//                 {
+//                     upperPolyLine.insert(upperPolyLine.end(), nextPartIntersection.value().begin(), nextPartIntersection.value().end());
+//                 }
+//                 break;
+//             }
+//         }
+//     }
 
+//     if (intersectionPt.size() == 0)
+//     {
+
+//         Point2D P_begin = {P.front()[0], P.front()[1]};
+//         Point2D Q_begin = {Q.front()[0], Q.front()[1]};
+
+//         if (length(P_begin) > length(Q_begin))
+//         {
+//             return P;
+//         }
+//         else
+//         {
+//             return Q;
+//         }
+//     }
+
+//     return upperPolyLine;
+// }
+
+// PolyLineCAD的圆弧段与多线段相交，返回相交后的折线段
+// P为软弱层、断层、用户指定折线段
+// Q为圆弧滑面
 std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q)
 {
     PolyLineCAD upperBound;
+
+    double radius;
+    Point2D center;
+    Point2D entryPoint;
+    Point2D exitPoint;
+
+    entryPoint = {Q[0][0], Q[0][1]};
+    exitPoint = {Q[1][0], Q[1][1]};
 
     return upperBound;
 }

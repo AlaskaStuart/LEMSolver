@@ -17,7 +17,10 @@ void Solver::initialize()
                                                  this->cfg_.entry_exit_points_num);
     this->exitPointsSet_ = interpolatedPolyLine(this->exitRange_,
                                                 this->cfg_.entry_exit_points_num);
+
     // step-3: 生成滑面, 圆弧型或复合型
+    // TODO: 加个判断，是否采用复合滑面
+    // 还是说要暴露接口，让用户自行判断是否选择复合型滑面
     this->slipsSet_ = setSlips(this->entryPointsSet_,
                                this->exitPointsSet_,
                                this->cfg_.slips_num,
@@ -45,7 +48,7 @@ void Solver::startAnalysis(std::string methodName)
     FSFunc func = it->second;
 
     // 初始化结果
-    std::map<std::tuple<int, int, int>, float> results;
+    std::map<std::tuple<int, int, int>, double> results;
 
     // 所需参数: 地层, 切片
     std::vector<Strata> stratumList = this->slope_.stratum;
@@ -58,7 +61,7 @@ void Solver::startAnalysis(std::string methodName)
         const auto &ithSlicesStratum = slicesWithStratum.second;
 
         // 计算安全系数
-        float fs = func(ithSlicesStratum, stratumList);
+        double fs = func(ithSlicesStratum, stratumList);
 
         results[slicesKey] = fs;
     }
