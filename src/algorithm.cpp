@@ -199,32 +199,39 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         const std::array<double, 2> &entryPoint = entryPointsSet[entryPtIdx];
         const std::array<double, 2> &exitPoint = exitPointsSet[exitPtIdx];
 
-        // 插值生成x
-        std::vector<double> vectorX = interpolate(entryPoint[0], exitPoint[0], matrixRow + 1);
-        double dx = vectorX[1] - vectorX[0];
-        // vectorX.erase(vectorX.begin());//移除第一个元素
-        // 移除最后一个元素
-        vectorX.pop_back();
-        // x取切条的中值
-        std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
-                      { x += dx / 2; });
-
-        // yTop
-        // 根据x在slopeShape上找到相应的y值
+        // 切片的x值
+        std::vector<double> vectorX;
+        // 切片的yTop值
         std::vector<double> vectorYtop;
-        for (double midX : vectorX)
-        {
-            double midY = getYbyX(slopeShape, midX);
-            vectorYtop.push_back(midY);
-        }
 
-        // yBot
-        // 根据x与滑面圆之间的关系生成y值
-        // | [x, yBot]-[xC, yC] | = R
-        // xC, yC, R已知, 带入x可求得yBot
-        // 圆弧的圆心坐标和半径
+        // 圆弧滑面计算方式
         if (ithslip.size() == 1)
         {
+            // 查看是否与坡型方向有关
+            // 插值生成x
+            // 入口点和出口点的x值进行插值
+            vectorX = interpolate(entryPoint[0], exitPoint[0], matrixRow + 1);
+            double dx = vectorX[1] - vectorX[0];
+
+            // 移除最后一个元素
+            vectorX.pop_back();
+            // x取切条的中值
+            std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
+                          { x += dx / 2; });
+
+            // yTop
+            // 根据x在slopeShape上找到相应的y值
+            // std::vector<double> vectorYtop;
+            for (double midX : vectorX)
+            {
+                double midY = getYbyX(slopeShape, midX);
+                vectorYtop.push_back(midY);
+            }
+            // yBot
+            // 根据x与滑面圆之间的关系生成y值
+            // | [x, yBot]-[xC, yC] | = R
+            // xC, yC, R已知, 带入x可求得yBot
+            // 圆弧的圆心坐标和半径
             std::array<double, 3> ithSlipCircle = ithslip.at(0);
 
             double slipCX = std::get<0>(ithSlipCircle);
@@ -247,9 +254,38 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
 
             results[mapKey] = ithMat;
         }
+        // 复合滑面
         else
         {
-            // 复合滑面
+            // TODO: 需要上一个方法返回的切片为已经和圆弧滑面、边坡坡型相切之后的结果。
+            std::array<double, 3> slipBegin = ithslip.at(0);
+            std::array<double, 3> slipEnd = ithslip.at(ithslip.size() - 1);
+
+            // x由画面的起始点和终止点插值生成，从大到小
+            // 取ithslip第一个值和最后一个值，由第一个值和最后一个值插值生成x
+            // 需要起始点和终止点
+            double slipBeginX = std::get<0>(slipBegin);
+            double slipEndX = std::get<0>(slipEnd);
+            vectorX = interpolate(slipBeginX, slipEndX, matrixRow + 1);
+            double dx = vectorX[1] - vectorX[0];
+            // 移除最后一个元素
+            vectorX.pop_back();
+            // x取切条的中值
+            std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
+                          { x += dx / 2; });
+
+            // 切片的yBot值
+            // 遍历ithslip，判断每个点的第三个元素是否为0，判断的时候考虑到误差
+            // 若为0，则使用getYbyX()函数计算y值
+            // 若不为0，半径，圆心坐标，计算y值,复制上面的计算方式
+            // 无法复用，需要重新写一些方法
+            // 定义两个方法，一个是从两个点和圆心、圆弧去生成CAD多线段表示法
+            // 另一个是从CAD多线段转化出两个点、圆心和半径。
+
+            // 切片的yTop值
+            // 取ithslip第一个值和最后一个值，由第一个值和最后一个值截取slope_shape
+            // 由截取的slope_shape计算yTop值
+            // 需要起始点和终止点
             for (double sliceX : vectorX)
             {
                 int ithslipSize = ithslip.size();
@@ -749,25 +785,30 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
     return prevFS;
 }
 
-double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
-{
-    float result = -1.0;
-    float pushingForce = 0.0;
+// double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+// {
+//     float result = -1.0;
+//     float pushingForce = 0.0;
 
-    return result;
-}
+//     return result;
+// }
 
-double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
-{
-    float result = -1.0;
-    float pushingForce = 0.0;
+// double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
+// {
+//     float result = -1.0;
+//     float pushingForce = 0.0;
 
-    return result;
-}
+//     return result;
+// }
+
+// std::map<std::string, FSFunc> methodMap = {
+//     {"Ordinary", calculateFSOrdinary},
+//     {"Bishop", calculateFSBishop},
+//     {"Janbu", calculateFSJanbu},
+//     {"Spencer", calculateFSSpencer},
+//     {"MorgensternPrice", calculateFSMorgensternPrice}};
 
 std::map<std::string, FSFunc> methodMap = {
     {"Ordinary", calculateFSOrdinary},
     {"Bishop", calculateFSBishop},
-    {"Janbu", calculateFSJanbu},
-    {"Spencer", calculateFSSpencer},
-    {"MorgensternPrice", calculateFSMorgensternPrice}};
+    {"Janbu", calculateFSJanbu}};

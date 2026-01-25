@@ -530,5 +530,26 @@ std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, Po
     entryPoint = {Q[0][0], Q[0][1]};
     exitPoint = {Q[1][0], Q[1][1]};
 
+    // TODO
+
     return upperBound;
+}
+
+// 从两个点和圆心、圆弧去生成CAD多线段表示法
+PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius)
+{
+    PolyLineCAD result;
+    // do some function
+    return result;
+}
+
+// 从CAD多线段转化出两个点、圆心和半径
+std::tuple<Point2D, Point2D, Point2D, double> polyLineCADToPointAndCircle(const PolyLineCAD &P)
+{
+    Point2D polylineBeg;
+    Point2D polylineEnd;
+    Point2D center;
+    double radius;
+    // do some function
+    return std::make_tuple(polylineBeg, polylineEnd, center, radius);
 }

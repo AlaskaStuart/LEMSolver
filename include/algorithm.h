@@ -58,9 +58,9 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
 
 double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
-double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
+// double calculateFSSpencer(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
-double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
+// double calculateFSMorgensternPrice(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum);
 
 extern std::map<std::string, FSFunc> methodMap;
 
