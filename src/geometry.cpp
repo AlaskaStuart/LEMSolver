@@ -536,20 +536,193 @@ std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, Po
 }
 
 // 从两个点和圆心、圆弧去生成CAD多线段表示法
-PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius)
+PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius, bool ccw = true)
 {
+
+    if (radius < EPSILON)
+        throw std::runtime_error("Invalid radius");
+
+    // 声明结果
     PolyLineCAD result;
-    // do some function
+    result.reserve(2);
+    double bulge;
+
+    Point2D CA = A - center;
+    Point2D CB = B - center;
+
+    if (std::abs(length(CA) - radius) > EPSILON || std::abs(length(CB) - radius) > EPSILON)
+    {
+        throw std::runtime_error("Points are not on the circle");
+    }
+
+    // 起止角
+    double angA = std::atan2(CA[1], CA[0]);
+    double angB = std::atan2(CB[1], CB[0]);
+
+    // 中心角
+    double theta = angB - angA;
+    if (ccw)
+    {
+        if (theta < 0)
+            theta += 2.0 * PI;
+    }
+    else
+    {
+        if (theta > 0)
+            theta -= 2.0 * PI;
+    }
+
+    // CAD bugle
+    double bulge = std::tan(theta / 4.0);
+
+    result.push_back({A[0], A[1], bulge});
+    result.push_back({B[0], B[1], 0.0});
+
     return result;
 }
 
 // 从CAD多线段转化出两个点、圆心和半径
-std::tuple<Point2D, Point2D, Point2D, double> polyLineCADToPointAndCircle(const PolyLineCAD &P)
+std::tuple<Point2D, Point2D, Point2D, double, bool> polyLineCADToPointAndCircle(const PolyLineCAD &P)
 {
     Point2D polylineBeg;
     Point2D polylineEnd;
     Point2D center;
     double radius;
-    // do some function
-    return std::make_tuple(polylineBeg, polylineEnd, center, radius);
+    bool ccw;
+
+    polylineBeg = {P[0][0], P[0][1]};
+    polylineEnd = {P[1][0], P[1][1]};
+
+    double bulge = P[0][2];
+    if (std::abs(bulge) < EPSILON)
+        throw std::runtime_error("bulge = 0, this is a line segment");
+
+    double lenAB = length(polylineEnd - polylineBeg);
+    if (lenAB < EPSILON)
+        throw std::runtime_error("lenAB = 0,this is a line");
+
+    // 中心角
+    double theta = 4 * std::atan(bulge);
+    double absTheta = std::abs(theta);
+
+    // 半径
+    radius = lenAB / (2 * std::sin(absTheta / 2));
+
+    // 弦中点
+    Point2D M = (polylineBeg + polylineEnd) * 0.5;
+
+    // 单位垂直方向
+    Point2D unitPerp = perp(polylineEnd - polylineBeg);
+    unitPerp = unitPerp * (1 / length(unitPerp));
+
+    // bulge决定左右
+    if (bulge > 0)
+        unitPerp = unitPerp * (-1);
+
+    double h = radius * std::cos(absTheta / 2.0);
+
+    // 圆心
+    center = M + unitPerp * h;
+
+    // 是否逆时针
+    ccw = (bulge > 0);
+
+    return std::make_tuple(polylineBeg, polylineEnd, center, radius, ccw);
 }
+
+// 实现原理:
+//  vect_delta = p1 -center
+//  vect_dir = p2 - p1
+//  p1p2上的任意一点p到圆心的向量可表示为: vect_p = t*vect_dir + vect_delta
+//  则p1p2与圆的交点满足: (vect_p-center)^2 = R^2
+//  问题就转换成求解关于t的二元一次方程
+MultiPoints2D intersectionArcAndPolyLine(const MultiPoints2D &polyline,
+                                         const Point2D &center,
+                                         double radius)
+{
+    int num = 0;
+    MultiPoints2D result;
+    int plineSize = polyline.size();
+    auto pointEqual = [&](const Point2D &a, const Point2D &b)
+    {
+        return std::abs(a[0] - b[0]) < EPSILON &&
+               std::abs(a[1] - b[1]) < EPSILON;
+    };
+
+    if (plineSize < 2)
+    {
+        throw std::runtime_error("polyline must have at least two points.");
+    }
+    else
+    {
+        for (int i = 0; i < plineSize - 1; i++)
+        {
+            Point2D p1 = polyline[i];
+            Point2D p2 = polyline[i + 1];
+
+            Point2D dir = p2 - p1;
+
+            // p = p1 + t * dir
+            // ||p - center||^2 = R^2
+            Point2D delta = p1 - center;
+
+            // a = |dir|^2
+            // b = 2 * (dir * delta)
+            // c = delta * delta - R^2
+            // double a = dir[0] * dir[0] + dir[1] * dir[1];
+            double a = dot(dir, dir);
+            double b = 2 * dot(dir, delta);
+            double c = dot(delta, delta) - radius * radius;
+
+            // 解二次方程 a*t² + b*t + c = 0
+            double discriminant = b * b - 4 * a * c;
+
+            std::vector<double> t_values;
+
+            if (discriminant > EPSILON)
+            {
+                double t1 = (-b + std::sqrt(discriminant)) / (2 * a);
+                double t2 = (-b - std::sqrt(discriminant)) / (2 * a);
+                t_values.push_back(t1);
+                t_values.push_back(t2);
+            }
+            else if (abs(discriminant) <= EPSILON)
+            {
+                double t = -b / (2 * a);
+                t_values.push_back(t);
+            }
+            else
+            {
+                continue;
+            }
+
+            for (double t : t_values)
+            {
+                if (t < -EPSILON || t > 1.0 + EPSILON)
+                    continue;
+                // clamp
+                t = std::max(0.0, std::min(1.0, t));
+
+                Point2D interpPt = p1 + dir * t;
+
+                // 去重
+                bool duplicate = false;
+                for (const auto &p : result)
+                {
+                    if (pointEqual(p, interpPt))
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate)
+                {
+                    result.push_back(interpPt);
+                }
+            }
+        }
+        return result;
+    }
+}
+
+// TODO: 还需要一个MultiPoints2D转PolyLineCAD的方法

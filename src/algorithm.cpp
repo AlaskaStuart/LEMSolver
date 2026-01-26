@@ -155,13 +155,16 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
         // TODO:
         // 软弱层和断层、圆弧滑面、边坡表面
         // 需要
+        // 先计算软弱层/断层与圆弧滑面之间是否存在交点，交点个数是多少
+        // 如果存在交点，现在只考虑两种情况，一个交点的情况，两个交点的情况
+        // 如果交点只有一个，那么判断软弱层/断层哪一端距离圆心点更近
+        // 更近的那一端与交点之间的折线段保留，交点与剩余的那部分圆弧面加入到折线段
+
+        // 如果交点存在两个，左右端点为圆弧段，交点范围内为折线段
     }
 
     return results;
 }
-
-// TODO: 如果slipsSet第三列有一个值不为零，则说明是复合滑面
-// 如果是复合滑面，该怎么切割slices
 
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
 // 分割条带是个二维数组, shape = (3,slicesNum)
@@ -203,6 +206,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         std::vector<double> vectorX;
         // 切片的yTop值
         std::vector<double> vectorYtop;
+        // 切片的yBot值
+        std::vector<double> vectorYbot;
 
         // 圆弧滑面计算方式
         if (ithslip.size() == 1)
@@ -221,7 +226,6 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
 
             // yTop
             // 根据x在slopeShape上找到相应的y值
-            // std::vector<double> vectorYtop;
             for (double midX : vectorX)
             {
                 double midY = getYbyX(slopeShape, midX);
@@ -238,7 +242,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
             double slipCY = std::get<1>(ithSlipCircle);
             double slipCR = std::get<2>(ithSlipCircle);
 
-            std::vector<double> vectorYbot(vectorX.size());
+            // std::vector<double> vectorYbot(vectorX.size());
+            vectorYbot.reserve(vectorX.size());
             std::transform(vectorX.begin(),
                            vectorX.end(),
                            vectorYbot.begin(),
@@ -246,15 +251,8 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                            {
                                return slipCY - std::sqrt(slipCR * slipCR - (slipCX - x) * (slipCX - x));
                            });
-
-            // 保存ithMat
-            ithMat.setRow(0, vectorX);
-            ithMat.setRow(1, vectorYtop);
-            ithMat.setRow(2, vectorYbot);
-
-            results[mapKey] = ithMat;
         }
-        // 复合滑面
+        // 复合滑面计算方式
         else
         {
             // TODO: 需要上一个方法返回的切片为已经和圆弧滑面、边坡坡型相切之后的结果。
@@ -274,45 +272,66 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
             std::for_each(vectorX.begin(), vectorX.end(), [dx](double &x)
                           { x += dx / 2; });
 
-            // 切片的yBot值
-            // 遍历ithslip，判断每个点的第三个元素是否为0，判断的时候考虑到误差
-            // 若为0，则使用getYbyX()函数计算y值
-            // 若不为0，半径，圆心坐标，计算y值,复制上面的计算方式
-            // 无法复用，需要重新写一些方法
-            // 定义两个方法，一个是从两个点和圆心、圆弧去生成CAD多线段表示法
-            // 另一个是从CAD多线段转化出两个点、圆心和半径。
-
-            // 切片的yTop值
-            // 取ithslip第一个值和最后一个值，由第一个值和最后一个值截取slope_shape
-            // 由截取的slope_shape计算yTop值
-            // 需要起始点和终止点
-            for (double sliceX : vectorX)
+            for (double ithX : vectorX)
             {
-                int ithslipSize = ithslip.size();
-
-                for (int ithSlipPt = 0; ithSlipPt < ithslipSize - 1; ithSlipPt++)
+                // 切片的yBot值
+                // 遍历ithslip，判断每个点的第三个元素是否为0，判断的时候考虑到误差
+                // 若为0，则使用getYbyX()函数计算y值
+                // 若不为0，半径，圆心坐标，计算y值,复制上面的计算方式
+                for (int slipPtIdx = 0; slipPtIdx < ithslip.size() - 2; slipPtIdx++)
                 {
-                    // 从左至右依此取滑面多边形上的相邻两点
-                    // 遍历计算boty值
-                    std::array<double, 3> prevPt = ithslip.at(ithSlipPt);
-                    std::array<double, 3> nextPt = ithslip.at(ithSlipPt + 1);
-
-                    if (std::get<2>(prevPt) == 0)
+                    // 非圆弧面，正常插值
+                    if (std::abs(ithslip.at(slipPtIdx)[2]) < EPSILON)
                     {
-                        // use method getYbyX();
-                        std::array<double, 2> prevPt2D = {std::get<0>(prevPt), std::get<1>(prevPt)};
-                        std::array<double, 2> nextPt2D = {std::get<0>(nextPt), std::get<1>(nextPt)};
-                        MultiPoints2D pieceSlip = {prevPt2D, nextPt2D};
 
-                        double sliceY = getYbyX(pieceSlip, sliceX);
-                        if (std::isnan(sliceY))
+                        MultiPoints2D ithPart;
+                        ithPart.reserve(2);
+                        Point2D prevPt = {ithslip.at(slipPtIdx)[0], ithslip.at(slipPtIdx)[1]};
+                        Point2D nextPt = {ithslip.at(slipPtIdx + 1)[0], ithslip.at(slipPtIdx + 1)[1]};
+                        ithPart.push_back(prevPt);
+                        ithPart.push_back(nextPt);
+
+                        double ithY = getYbyX(ithPart, ithX);
+                        if (!isnan(ithY))
                         {
-                            continue;
+                            vectorYbot.push_back(ithY);
                         }
                     }
+                    // 圆弧面，按照圆弧坐标公式插值
+                    else
+                    {
+
+                        PolyLineCAD ithPart;
+                        ithPart.reserve(2);
+                        std::array<double, 3> prevPt = ithslip.at(slipPtIdx);
+                        std::array<double, 3> nextPt = ithslip.at(slipPtIdx + 1);
+                        ithPart.push_back(prevPt);
+                        ithPart.push_back(nextPt);
+
+                        // 由多线段计算出圆心和半径
+                        Point2D ithPartCenter;
+                        double radius;
+
+                        ithPartCenter = std::get<2>(polyLineCADToPointAndCircle(ithPart));
+                        radius = std::get<3>(polyLineCADToPointAndCircle(ithPart));
+
+                        double ithY = ithPartCenter[1] - std::sqrt(radius * radius - (ithPartCenter[0] - ithX) * (ithPartCenter[0] - ithX));
+                        vectorYbot.push_back(ithY);
+                    }
                 }
+
+                // 切片的yTop值
+                double ithYtop = getYbyX(slopeShape, ithX);
+                if (!isnan(ithYtop))
+                    vectorYtop.push_back(ithYtop);
             }
         }
+        // 保存ithMat
+        ithMat.setRow(0, vectorX);
+        ithMat.setRow(1, vectorYtop);
+        ithMat.setRow(2, vectorYbot);
+
+        results[mapKey] = ithMat;
     }
 
     return results;

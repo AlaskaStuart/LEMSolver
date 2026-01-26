@@ -50,9 +50,9 @@ std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, c
 std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q);
 
 // 从两个点和圆心、圆弧去生成CAD多线段表示法
-PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius);
+PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius, bool ccw = true);
 
-// 从CAD多线段转化出两个点、圆心和半径
-std::tuple<Point2D, Point2D, Point2D, double> polyLineCADToPointAndCircle(const PolyLineCAD &P);
+// 从CAD多线段转化出两个点、圆心和半径，是否顺时针或者逆时针
+std::tuple<Point2D, Point2D, Point2D, double, bool> polyLineCADToPointAndCircle(const PolyLineCAD &P);
 
 #endif

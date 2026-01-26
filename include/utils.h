@@ -140,7 +140,10 @@ double length(const Point2D &v)
 {
     return std::sqrt(dot(v, v));
 }
-
+Point2D perp(const Point2D &v)
+{
+    return {-v[1], v[0]};
+}
 // 打印多边形的线条
 void printPolyLine(const MultiPoints2D &poly);
 
