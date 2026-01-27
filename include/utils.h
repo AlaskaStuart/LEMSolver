@@ -96,7 +96,7 @@ using MultiPoints2D = std::vector<Point2D>;
 
 // 动态数组容器，m*3的矩阵
 // 前两列是x、y坐标，第三列是弧度，如果是直线段，则为0；如果是弧线，按照cad多线段计算方式表示
-// using PolyLine = std::vector<std::array<double, 3>>;
+
 using PolyLineCAD = std::vector<std::array<double, 3>>;
 
 // 存放可变长度元素的字典
@@ -150,5 +150,7 @@ void printPolyLine(const MultiPoints2D &poly);
 int getSliceBotIndex(const std::vector<double> &sliceStratum);
 
 std::vector<bool> isVector1Bigger(const std::vector<double> vect1, const std::vector<double> vect2);
+
+PolyLineCAD transformFromMultiPoints2D(const MultiPoints2D &mPts);
 
 #endif

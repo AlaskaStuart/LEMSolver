@@ -263,7 +263,6 @@ bool isLineIntersectedCircle(const MultiPoints2D &polyline,
         return isIntersected;
     };
 }
-
 // 实现原理:
 //  vect_delta = p1 -center
 //  vect_dir = p2 - p1
@@ -402,139 +401,6 @@ std::optional<Point2D> segmentIntersection(const Point2D &A, const Point2D &B, c
     return std::nullopt;
 }
 
-// 生成两个折线段相交之后、位于相交点以上部分的折线段。
-// 返回结果：如果两个线段，相交点之上部分线段合并后的折线段
-// 如果两个线段不相交，则返回结果是平均y值较大的折线段
-// 考虑的是，可能相交点不止一个，这种情况下尾段不知道该怎么处理
-// 而且如果不相交，这两个折线段的上下关系不好判定，阶段性放弃
-// @deprecated
-// 可能引发bug
-// std::optional<PolyLineCAD> getUpperPolyLineIntersection(const MultiPoints2D &P, const MultiPoints2D &Q)
-// {
-//     PolyLineCAD upperPolyLine;
-//     MultiPoints2D intersectionPt;
-
-//     // if ((P.size() == 1) || (Q.size() == 1))
-//     // {
-
-//     // }
-
-//     // if (P.size() == 1 and Q.size() > 1)
-//     // {
-//     //     if (P.front()[1] > (Q.front()[1]))
-//     //     {
-//     //         return P;
-//     //     }
-//     //     else
-//     //     {
-//     //         return Q;
-//     //     }
-//     // }
-//     // else if (Q.size() == 1 and P.size() > 1)
-//     // {
-//     //     if (Q.front()[1] > (P.front()[1]))
-//     //     {
-//     //         return Q;
-//     //     }
-//     //     else
-//     //     {
-//     //         return P;
-//     //     }
-//     // }
-//     // else if (Q.size() == 1 and P.size() == 1)
-//     // {
-//     //     if (P.front()[1] > (Q.front()[1]))
-//     //     {
-//     //         return P;
-//     //     }
-//     //     else
-//     //     {
-//     //         return Q;
-//     //     }
-//     // }
-
-//     for (size_t i = 0; i + 1 < P.size(); i++)
-//     {
-//         for (size_t j = 0; j + 1 < Q.size(); j++)
-//         {
-//             Point2D p1 = P[i];
-//             Point2D p2 = P[i + 1];
-
-//             Point2D q1 = Q[j];
-//             Point2D q2 = Q[j + 1];
-
-//             auto intersection = segmentIntersection(p1, p2, q1, q2);
-//             if (intersection)
-//             {
-//                 const Point2D &intersectionVal = intersection.value();
-
-//                 intersectionPt.push_back(intersectionVal);
-
-//                 if (p1[1] > q1[1])
-//                 {
-//                     upperPolyLine.insert(upperPolyLine.end(), P.begin(), P.begin() + i);
-//                     upperPolyLine.push_back({intersection.value()[0], intersectionVal[1], 0});
-//                 }
-//                 else if (q1[1] > p1[1])
-//                 {
-//                     upperPolyLine.insert(upperPolyLine.end(), Q.begin(), Q.begin() + j);
-//                     upperPolyLine.push_back({intersectionVal[0], intersectionVal[1], 0});
-//                 }
-
-//                 MultiPoints2D rightHalfP;
-//                 MultiPoints2D rightHalfQ;
-//                 rightHalfP.insert(rightHalfP.end(), P.begin() + i + 1, P.end());
-//                 rightHalfQ.insert(rightHalfQ.end(), Q.begin() + j + 1, Q.end());
-
-//                 std::optional<PolyLineCAD> nextPartIntersection = getUpperPolyLineIntersection(rightHalfP, rightHalfQ);
-//                 if (nextPartIntersection)
-//                 {
-//                     upperPolyLine.insert(upperPolyLine.end(), nextPartIntersection.value().begin(), nextPartIntersection.value().end());
-//                 }
-//                 break;
-//             }
-//         }
-//     }
-
-//     if (intersectionPt.size() == 0)
-//     {
-
-//         Point2D P_begin = {P.front()[0], P.front()[1]};
-//         Point2D Q_begin = {Q.front()[0], Q.front()[1]};
-
-//         if (length(P_begin) > length(Q_begin))
-//         {
-//             return P;
-//         }
-//         else
-//         {
-//             return Q;
-//         }
-//     }
-
-//     return upperPolyLine;
-// }
-
-// PolyLineCAD的圆弧段与多线段相交，返回相交后的折线段
-// P为软弱层、断层、用户指定折线段
-// Q为圆弧滑面
-std::optional<PolyLineCAD> getUpperPolyLineIntersection(const PolyLineCAD &P, PolyLineCAD &Q)
-{
-    PolyLineCAD upperBound;
-
-    double radius;
-    Point2D center;
-    Point2D entryPoint;
-    Point2D exitPoint;
-
-    entryPoint = {Q[0][0], Q[0][1]};
-    exitPoint = {Q[1][0], Q[1][1]};
-
-    // TODO
-
-    return upperBound;
-}
-
 // 从两个点和圆心、圆弧去生成CAD多线段表示法
 PolyLineCAD generatePloyLineCAD(const Point2D &A, const Point2D &B, const Point2D &center, double radius, bool ccw = true)
 {
@@ -640,7 +506,6 @@ MultiPoints2D intersectionArcAndPolyLine(const MultiPoints2D &polyline,
                                          const Point2D &center,
                                          double radius)
 {
-    int num = 0;
     MultiPoints2D result;
     int plineSize = polyline.size();
     auto pointEqual = [&](const Point2D &a, const Point2D &b)
@@ -725,4 +590,24 @@ MultiPoints2D intersectionArcAndPolyLine(const MultiPoints2D &polyline,
     }
 }
 
-// TODO: 还需要一个MultiPoints2D转PolyLineCAD的方法
+// PolyLineCAD的圆弧段与多线段相交，返回相交后的折线段
+// P为软弱层、断层、用户指定折线段
+// Q为圆弧滑面
+PolyLineCAD generateCompositeSlip(const Point2D &entryPt, const Point2D &exitPt, const Point2D &arcCenter, const double &radius, const MultiPoints2D &mPts)
+{
+    PolyLineCAD result;
+
+    MultiPoints2D intersection = intersectionArcAndPolyLine(mPts, arcCenter, radius);
+
+    if (intersection.size() == 1)
+    {
+    }
+    else if (intersection.size() == 2)
+    {
+        /* code */
+    }
+    else
+        result.push_back({arcCenter[0], arcCenter[1], radius});
+
+    return result;
+}

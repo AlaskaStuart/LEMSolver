@@ -47,3 +47,16 @@ std::vector<bool> isVector1Bigger(const std::vector<double> vect1, const std::ve
         return result;
     }
 }
+
+PolyLineCAD transformFromMultiPoints2D(const MultiPoints2D &mPts)
+{
+    PolyLineCAD result;
+    result.reserve(mPts.size());
+    for (const auto &p : mPts)
+    {
+        std::array<double, 3> ithPt = {p[0], p[1], 0};
+        result.push_back(ithPt);
+    }
+
+    return result;
+}

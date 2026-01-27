@@ -144,26 +144,49 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                      const int &numSlips,
                      const Slope &slope)
 {
-    PolyLineMap results;
+
+    PolyLineMap arcSlips = setSlips(entryPointsSet, exitPointsSet, numSlips, slope.slope_shape);
 
     if (slope.faults.empty())
     {
-        return setSlips(entryPointsSet, exitPointsSet, numSlips, slope.slope_shape);
+        return arcSlips;
     }
-    else
+
+    // TODO:
+    // 软弱层和断层、圆弧滑面、边坡表面
+    // 需要
+    // 先计算软弱层/断层与圆弧滑面之间是否存在交点，交点个数是多少
+    // 如果存在交点，现在只考虑两种情况，一个交点的情况，两个交点的情况
+    // 如果交点只有一个，那么判断软弱层/断层哪一端距离圆心点更近
+    // 更近的那一端与交点之间的折线段保留，交点与剩余的那部分圆弧面加入到折线段
+
+    // 如果交点存在两个，左右端点为圆弧段，交点范围内为折线段
+    PolyLineMap slipsMap;
+    for (auto ithArcSlipPair : arcSlips)
     {
-        // TODO:
-        // 软弱层和断层、圆弧滑面、边坡表面
-        // 需要
-        // 先计算软弱层/断层与圆弧滑面之间是否存在交点，交点个数是多少
-        // 如果存在交点，现在只考虑两种情况，一个交点的情况，两个交点的情况
-        // 如果交点只有一个，那么判断软弱层/断层哪一端距离圆心点更近
-        // 更近的那一端与交点之间的折线段保留，交点与剩余的那部分圆弧面加入到折线段
+        const std::tuple<int, int, int> &mapKey = ithArcSlipPair.first;
+        const PolyLineCAD &ithArcSlip = ithArcSlipPair.second;
 
-        // 如果交点存在两个，左右端点为圆弧段，交点范围内为折线段
+        int entryPtIdx = std::get<0>(mapKey);
+        int exitPtIdx = std::get<1>(mapKey);
+        int slipIdx = std::get<2>(mapKey);
+        const std::array<double, 2> &entryPoint = entryPointsSet[entryPtIdx];
+        const std::array<double, 2> &exitPoint = exitPointsSet[exitPtIdx];
+        Point2D ithArcSlipCenter = {ithArcSlip[0][0], ithArcSlip[0][1]};
+        double ithArcSlipRadius = ithArcSlip[0][2];
+
+        // 检查圆弧是否与软弱层/断层相交
+        // 需要的参数有
+        // 1. 圆弧的圆心坐标
+        // 2. 圆弧半径
+        // 3. 起止点、终止点
+        // 4. 软弱层/断层
+        // TODO: fault struct重写
+        PolyLineCAD ithCompositeSlip = generateCompositeSlip(entryPoint, exitPoint, ithArcSlipCenter, ithArcSlipRadius, slope.faults.front().fault_shape);
+        slipsMap[mapKey] = ithCompositeSlip;
     }
 
-    return results;
+    return slipsMap;
 }
 
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
