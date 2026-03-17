@@ -19,12 +19,13 @@ void Solver::initialize()
                                                 this->cfg_.entry_exit_points_num);
 
     // step-3: 生成滑面, 圆弧型或复合型
-    // TODO: 加个判断，是否采用复合滑面
-    // 还是说要暴露接口，让用户自行判断是否选择复合型滑面
+    // TODO: 是应该软件自己判断是否采用复合滑面，还是说要暴露接口，让用户自行判断是否选择复合型滑面
+    // 目前做法默认是复合型滑面，向下兼容圆弧形滑面
+    // 如果存在软弱层/断层，先简单预处理，超出预处理的预设条件之外的其他情景，则退化为圆弧型滑面
     this->slipsSet_ = setSlips(this->entryPointsSet_,
                                this->exitPointsSet_,
                                this->cfg_.slips_num,
-                               this->slope_.slope_shape);
+                               this->slope_);
     // step-4: 生成切片
     this->slicesGeomSet_ = setSlicesGeom(this->entryPointsSet_,
                                          this->exitPointsSet_,

@@ -31,16 +31,16 @@ void from_json(const json &j, Strata &s)
     s.strata_lower_bound = json_to_points(j.at("strata_lower_bound"));
 }
 
-void from_json(const json &j, Fault &f)
-{
+// void from_json(const json &j, Fault &f)
+// {
 
-    if (j.contains("fault_id"))
-    {
-        j.at("fault_id").get_to(f.fault_id);
-    }
-    if (j.contains("fault_shape"))
-        f.fault_shape = json_to_points(j.at("fault_shape"));
-}
+//     if (j.contains("fault_id"))
+//     {
+//         j.at("fault_id").get_to(f.fault_id);
+//     }
+//     if (j.contains("fault_shape"))
+//         f.fault_shape = json_to_points(j.at("fault_shape"));
+// }
 
 void from_json(const json &j, Slope &s)
 {
@@ -54,14 +54,17 @@ void from_json(const json &j, Slope &s)
 
     j.at("stratum").get_to(s.stratum);
 
-    if (j.contains("faults"))
-        j.at("faults").get_to(s.faults);
+    // if (j.contains("faults"))
+    //     j.at("faults").get_to(s.faults);
+
+    if (j.contains("fault") && !j["fault"].empty())
+        s.fault = json_to_points(j["fault"]);
 }
 
 Slope readSlopeFromJson(const std::string &filename)
 {
 
-    std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+    // std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
 
     std::ifstream f(filename);
     if (!f.is_open())

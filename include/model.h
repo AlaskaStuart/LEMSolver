@@ -17,25 +17,26 @@ struct Strata
     MultiPoints2D strata_lower_bound;
 };
 
-struct Fault
-{
+// struct Fault
+// {
 
-    int fault_id;
-    MultiPoints2D fault_shape;
-};
+//     int fault_id;
+//     MultiPoints2D fault_shape;
+// };
 
 struct Slope
 {
 
     MultiPoints2D slope_shape;
     std::vector<struct Strata> stratum;
-    std::vector<struct Fault> faults;
+    // std::vector<struct Fault> faults;
+    MultiPoints2D fault;
     MultiPoints2D water_level;
 };
 
 void from_json(const json &j, Slope &s);
 void from_json(const json &j, Strata &s);
-void from_json(const json &j, Fault &s);
+// void from_json(const json &j, Fault &s);
 
 Slope readSlopeFromJson(const std::string &filename);
 

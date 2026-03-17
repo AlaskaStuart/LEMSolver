@@ -8,7 +8,7 @@ int main()
     clock_t start, end;
     start = clock();
     // 第一步, 读取json剖面文件
-    std::string jsonfilename = "./data/sectionDemoNor.json";
+    std::string jsonfilename = "./data/section-Nor-scene12.json";
     // json文件生成边坡数据结构体
     Slope slpDemo = readSlopeFromJson(jsonfilename);
 

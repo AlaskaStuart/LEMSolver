@@ -111,8 +111,11 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                 // 验证是否有交点
                 // 如果圆弧面与边坡表面交点数量小于3, 则将计算结果添加到map中
                 MultiPoints2D cuttedPolyline = cutFromPolyLine(slopeShape, entryPoint, exitPoint);
-                // TODO: 将center,radius, entryPoint, exitPoint聚合成PolyLinCAD
+
                 int intersection = intersectionNum(cuttedPolyline, center, radius);
+                // TODO: test 记得替换
+                MultiPoints2D interPt = polyLineArcIntersection(cuttedPolyline, center, radius);
+
                 if (intersection < 3)
                 {
                     std::array<double, 3> ithArcGeom;
@@ -136,9 +139,8 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
     return slipsMap;
 }
 
-// TODO: 复合滑面
-// 存储的是CAD版本的多线段
-// vector长度不唯一
+// 如果不存在软弱层/断层，那么该方法就会退化成圆弧形滑面
+// 如果返回结果长度为1，则圆弧形滑面，大于1则为非复合滑面
 PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
                      const MultiPoints2D &exitPointsSet,
                      const int &numSlips,
@@ -147,21 +149,15 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
 
     PolyLineMap arcSlips = setSlips(entryPointsSet, exitPointsSet, numSlips, slope.slope_shape);
 
-    if (slope.faults.empty())
+    if (slope.fault.empty())
     {
         return arcSlips;
     }
 
-    // TODO:
-    // 软弱层和断层、圆弧滑面、边坡表面
-    // 需要
-    // 先计算软弱层/断层与圆弧滑面之间是否存在交点，交点个数是多少
-    // 如果存在交点，现在只考虑两种情况，一个交点的情况，两个交点的情况
-    // 如果交点只有一个，那么判断软弱层/断层哪一端距离圆心点更近
-    // 更近的那一端与交点之间的折线段保留，交点与剩余的那部分圆弧面加入到折线段
-
-    // 如果交点存在两个，左右端点为圆弧段，交点范围内为折线段
     PolyLineMap slipsMap;
+
+    // 断层/软弱面
+    MultiPoints2D weakSurface = slope.fault;
     for (auto ithArcSlipPair : arcSlips)
     {
         const std::tuple<int, int, int> &mapKey = ithArcSlipPair.first;
@@ -170,22 +166,205 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
         int entryPtIdx = std::get<0>(mapKey);
         int exitPtIdx = std::get<1>(mapKey);
         int slipIdx = std::get<2>(mapKey);
+
         const std::array<double, 2> &entryPoint = entryPointsSet[entryPtIdx];
         const std::array<double, 2> &exitPoint = exitPointsSet[exitPtIdx];
+
         Point2D ithArcSlipCenter = {ithArcSlip[0][0], ithArcSlip[0][1]};
         double ithArcSlipRadius = ithArcSlip[0][2];
 
-        // 检查圆弧是否与软弱层/断层相交
-        // 需要的参数有
-        // 1. 圆弧的圆心坐标
-        // 2. 圆弧半径
-        // 3. 起止点、终止点
-        // 4. 软弱层/断层
-        // TODO: fault struct重写
-        PolyLineCAD ithCompositeSlip = generateCompositeSlip(entryPoint, exitPoint, ithArcSlipCenter, ithArcSlipRadius, slope.faults.front().fault_shape);
-        slipsMap[mapKey] = ithCompositeSlip;
-    }
+        // 这里需要保左边点的横坐标要小于右边点的横坐标'
+        Point2D lPt = exitPoint;
+        Point2D rPt = entryPoint;
+        if (lPt[0] > rPt[0])
+        {
+            std::swap(lPt, rPt);
+        }
 
+        // 先检查断层、软弱层与圆弧形滑面是否有交点
+        // 再检查断层、软弱层与边坡是否有交点
+        // 两次检查分别有三种情景：1个交叉点，2个交叉点，无交叉点
+        // 检查一有1个交点：根据下一步的判断决定情况
+        // 情景1.1：断层、软弱层与边坡存在一个交点，返回复合型边坡，一半是断层、软弱层，一半是圆弧形
+        // 情景1.2：断层、软弱层与边坡存在2个交点，返回为断层、软弱层
+        // 情景1.3: 断层、软弱层与边坡不存在交点，返回为圆弧形滑面
+        // 检查一有2个交点：返回复合型滑面，有圆弧形-断层软弱层-圆弧组成的三段式滑面
+        // 检查一无交点：根据下一步的判断决定情况
+        // 情景3.1: 断层、软弱层与边坡存在一个交点，返回圆弧形滑面
+        // 情景3.2: 断层、软弱层与边坡存在两个交点，判断断层软弱层与圆弧形滑面的上下关系，谁在上面，则返回哪个
+        // 情景3.3: 断层、软弱层与边坡不存在交点，则返回圆弧形滑面
+        // 除了以上9种情景之外的其他情景，都返回圆弧形滑面
+
+        MultiPoints2D preWeakSurface;
+        MultiPoints2D cuttedSlopeShape = cutFromPolyLine(slope.slope_shape, entryPoint, exitPoint);
+        MultiPoints2D faultAndSlopeIntersection = twoPolyLineIntersection(cuttedSlopeShape, weakSurface);
+        MultiPoints2D faultAndSlipIntersection = polyLineArcIntersection(weakSurface, ithArcSlipCenter, ithArcSlipRadius);
+        PolyLineCAD ithSlip;
+
+        // 情景1
+        if (faultAndSlipIntersection.size() == 1)
+        {
+            // 情景1.1
+            if (faultAndSlopeIntersection.size() == 1)
+            {
+
+                // 计算dir，边坡朝向
+                double dir = entryPoint[1] - exitPoint[1];
+                if (dir > 0)
+                {
+                    // 边坡剖面右高左低
+                    preWeakSurface = cutFromPolyLine(weakSurface, faultAndSlopeIntersection[0], weakSurface[weakSurface.size() - 1]);
+                }
+                else
+                {
+                    // 边坡剖面左高右低
+                    preWeakSurface = cutFromPolyLine(weakSurface, weakSurface[0], faultAndSlopeIntersection[0]);
+                }
+
+                // AB为软弱层/断层（A在左，B在右）
+                Point2D vectCA = ithArcSlipCenter - preWeakSurface[0];
+                Point2D vectCB = ithArcSlipCenter - preWeakSurface.back();
+                // 两种情景：边坡从左至右逐渐上升、逐渐下降，A在圆弧以上、B在圆弧以下，A在圆弧以下、B在圆弧之上
+                // 两种情景排列组合，共有4中情况
+                // 最终归纳总结得到的结论为
+                // A在圆弧之上时，先折线后圆弧
+                // B在圆弧之上时，先圆弧后折线
+                PolyLineCAD arcPart;
+                // A在圆弧之上时
+                if ((length(vectCA) < ithArcSlipRadius - EPSILON) && (length(vectCB) > ithArcSlipRadius - EPSILON))
+                {
+                    // TODO: 先折线段，然后圆弧段
+                    //  左侧折线段
+                    MultiPoints2D intermediatePart = cutFromPolyLine(preWeakSurface, lPt, faultAndSlipIntersection[0]);
+                    // 去掉最后一个元素
+                    intermediatePart.pop_back();
+                    // 转换成PolyLineCAD
+                    PolyLineCAD intermediatePartCAD = transformFromMultiPoints2D(intermediatePart);
+
+                    // 右侧圆弧段
+                    arcPart = toPolyLineCAD(faultAndSlipIntersection[0], rPt, ithArcSlipCenter, ithArcSlipRadius);
+
+                    // 先折线段，然后圆弧段
+                    ithSlip.insert(ithSlip.end(), intermediatePartCAD.begin(), intermediatePartCAD.end());
+                    ithSlip.insert(ithSlip.end(), arcPart.begin(), arcPart.end());
+                }
+                // B在圆弧之上时
+                else if ((length(vectCB) < ithArcSlipRadius - EPSILON) && (length(vectCA) > ithArcSlipRadius - EPSILON))
+                {
+
+                    // 左侧圆弧段
+                    arcPart = toPolyLineCAD(lPt, faultAndSlipIntersection[0], ithArcSlipCenter, ithArcSlipRadius);
+                    // 右侧折线段
+                    MultiPoints2D intermediatePart = cutFromPolyLine(preWeakSurface, faultAndSlipIntersection[0], rPt);
+                    // 去掉第一个元素
+                    intermediatePart.erase(intermediatePart.begin());
+                    // 转换成PolyLineCAD
+                    PolyLineCAD intermediatePartCAD = transformFromMultiPoints2D(intermediatePart);
+
+                    // 先圆弧段，后折线段
+                    ithSlip.insert(ithSlip.end(), arcPart.begin(), arcPart.end());
+                    ithSlip.insert(ithSlip.end(), intermediatePartCAD.begin(), intermediatePartCAD.end());
+                }
+
+                slipsMap[mapKey] = ithSlip;
+            }
+            // 情景1.2
+            else if (faultAndSlopeIntersection.size() == 2)
+            {
+                preWeakSurface = cutFromPolyLine(weakSurface, faultAndSlopeIntersection[0], faultAndSlopeIntersection[1]);
+                ithSlip = transformFromMultiPoints2D(preWeakSurface);
+                slipsMap[mapKey] = ithSlip;
+            }
+            // 情景1.3和其他情景
+            else
+            {
+                slipsMap[mapKey] = ithArcSlip;
+            }
+        }
+        // 情景2
+        else if (faultAndSlipIntersection.size() == 2)
+        {
+            // 情景2.2
+            if (faultAndSlopeIntersection.size() == 2)
+            {
+                // 第一段多线段
+                MultiPoints2D polylinePart1 = cutFromPolyLine(weakSurface, faultAndSlopeIntersection[0], faultAndSlipIntersection[0]);
+                polylinePart1.pop_back();
+
+                PolyLineCAD polylinePart1CAD = transformFromMultiPoints2D(polylinePart1);
+
+                ithSlip.insert(ithSlip.end(), polylinePart1CAD.begin(), polylinePart1CAD.end());
+
+                // 中间段圆弧
+                PolyLineCAD arcPart = toPolyLineCAD(faultAndSlipIntersection[0], faultAndSlipIntersection[1], ithArcSlipCenter, ithArcSlipRadius);
+
+                ithSlip.insert(ithSlip.end(), arcPart.begin(), arcPart.end());
+
+                // 第二段多线段
+                MultiPoints2D polylinePart2 = cutFromPolyLine(weakSurface, faultAndSlipIntersection[1], faultAndSlopeIntersection[1]);
+                polylinePart2.erase(polylinePart2.begin());
+                PolyLineCAD polylinePart2CAD = transformFromMultiPoints2D(polylinePart2);
+
+                ithSlip.insert(ithSlip.end(), polylinePart2CAD.begin(), polylinePart2CAD.end());
+            }
+            // 情景2.1 情景2.3 和其他情况
+            else
+            {
+                // 第一个交点左侧，圆弧段
+                PolyLineCAD arcPart1 = toPolyLineCAD(lPt, faultAndSlipIntersection[0], ithArcSlipCenter, ithArcSlipRadius);
+                ithSlip.insert(ithSlip.end(), arcPart1.begin(), arcPart1.end());
+
+                // 两个交点中间段, 多线段
+                MultiPoints2D intermediatePart = cutFromPolyLine(weakSurface, faultAndSlipIntersection[0], faultAndSlipIntersection[1]);
+                // 去掉第一个元素和最后一个元素
+                intermediatePart.erase(intermediatePart.begin());
+                intermediatePart.pop_back();
+                // 转换成PolyLineCAD
+                PolyLineCAD intermediatePartCAD = transformFromMultiPoints2D(intermediatePart);
+                ithSlip.insert(ithSlip.end(), intermediatePartCAD.begin(), intermediatePartCAD.end());
+
+                // 第二个交点右侧，圆弧段
+                PolyLineCAD arcPart2 = toPolyLineCAD(faultAndSlipIntersection[1], rPt, ithArcSlipCenter, ithArcSlipRadius);
+
+                ithSlip.insert(ithSlip.end(), arcPart2.begin(), arcPart2.end());
+            }
+
+            slipsMap[mapKey] = ithSlip;
+        }
+        // 情景3
+        else if (faultAndSlipIntersection.empty())
+        {
+            // 情景3.2
+            if (faultAndSlopeIntersection.size() == 2)
+            {
+                preWeakSurface = cutFromPolyLine(weakSurface, faultAndSlopeIntersection[0], faultAndSlopeIntersection[1]);
+
+                // AB为软弱层/断层（A在左，B在右）
+                Point2D vectCA = ithArcSlipCenter - preWeakSurface[0];
+                Point2D vectCB = ithArcSlipCenter - preWeakSurface.back();
+
+                if ((length(vectCA) < ithArcSlipRadius - EPSILON) && (length(vectCB) < ithArcSlipRadius - EPSILON))
+                {
+                    ithSlip = transformFromMultiPoints2D(preWeakSurface);
+                    slipsMap[mapKey] = ithSlip;
+                }
+                else
+                {
+                    slipsMap[mapKey] = ithArcSlip;
+                }
+            }
+            // 情景3.1 情景3.3 和其他情况
+            else
+            {
+                slipsMap[mapKey] = ithArcSlip;
+            }
+        }
+        else
+        {
+            // 除了上述9种情景之外的其他情景：返回圆弧滑面
+            slipsMap[mapKey] = ithArcSlip;
+        }
+    }
     return slipsMap;
 }
 
@@ -278,16 +457,16 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         // 复合滑面计算方式
         else
         {
-            // TODO: 需要上一个方法返回的切片为已经和圆弧滑面、边坡坡型相切之后的结果。
-            std::array<double, 3> slipBegin = ithslip.at(0);
-            std::array<double, 3> slipEnd = ithslip.at(ithslip.size() - 1);
+            // 确保上一个方法返回的切片为已经和圆弧滑面、边坡坡型相切之后的结果。
+            std::array<double, 3> slipLeft = ithslip.at(0);
+            std::array<double, 3> slipRight = ithslip.at(ithslip.size() - 1);
 
             // x由画面的起始点和终止点插值生成，从大到小
             // 取ithslip第一个值和最后一个值，由第一个值和最后一个值插值生成x
             // 需要起始点和终止点
-            double slipBeginX = std::get<0>(slipBegin);
-            double slipEndX = std::get<0>(slipEnd);
-            vectorX = interpolate(slipBeginX, slipEndX, matrixRow + 1);
+            double slipLeftX = std::get<0>(slipLeft);
+            double slipRightX = std::get<0>(slipRight);
+            vectorX = interpolate(slipLeftX, slipRightX, matrixRow + 1);
             double dx = vectorX[1] - vectorX[0];
             // 移除最后一个元素
             vectorX.pop_back();
@@ -301,7 +480,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                 // 遍历ithslip，判断每个点的第三个元素是否为0，判断的时候考虑到误差
                 // 若为0，则使用getYbyX()函数计算y值
                 // 若不为0，半径，圆心坐标，计算y值,复制上面的计算方式
-                for (int slipPtIdx = 0; slipPtIdx < ithslip.size() - 2; slipPtIdx++)
+                for (int slipPtIdx = 0; slipPtIdx < ithslip.size() - 1; slipPtIdx++)
                 {
                     // 非圆弧面，正常插值
                     if (std::abs(ithslip.at(slipPtIdx)[2]) < EPSILON)
@@ -313,11 +492,13 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         Point2D nextPt = {ithslip.at(slipPtIdx + 1)[0], ithslip.at(slipPtIdx + 1)[1]};
                         ithPart.push_back(prevPt);
                         ithPart.push_back(nextPt);
+                        // PolyLineCAD ithPart = {ithslip.at(slipPtIdx), ithslip.at(slipPtIdx + 1)};
 
                         double ithY = getYbyX(ithPart, ithX);
-                        if (!isnan(ithY))
+                        if (!std::isnan(ithY))
                         {
                             vectorYbot.push_back(ithY);
+                            break;
                         }
                     }
                     // 圆弧面，按照圆弧坐标公式插值
@@ -332,20 +513,22 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
                         ithPart.push_back(nextPt);
 
                         // 由多线段计算出圆心和半径
-                        Point2D ithPartCenter;
-                        double radius;
+                        // Point2D ithPartCenter;
+                        // double radius;
+                        // ithPartCenter = std::get<2>(fromPolyLineCAD(ithPart));
+                        // radius = std::get<3>(fromPolyLineCAD(ithPart));
 
-                        ithPartCenter = std::get<2>(polyLineCADToPointAndCircle(ithPart));
-                        radius = std::get<3>(polyLineCADToPointAndCircle(ithPart));
+                        auto [A, B, ithPartCenter, radius, ccw] = fromPolyLineCAD(ithPart);
 
                         double ithY = ithPartCenter[1] - std::sqrt(radius * radius - (ithPartCenter[0] - ithX) * (ithPartCenter[0] - ithX));
                         vectorYbot.push_back(ithY);
+                        break;
                     }
                 }
 
                 // 切片的yTop值
                 double ithYtop = getYbyX(slopeShape, ithX);
-                if (!isnan(ithYtop))
+                if (!std::isnan(ithYtop))
                     vectorYtop.push_back(ithYtop);
             }
         }
@@ -488,6 +671,7 @@ CalcuInitArgs getInitArgs(const CustomMatrix &slicesStratum, std::vector<Strata>
     return {stratumSize, slicesX, dx, dir};
 }
 
+// 瑞典条分法
 double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
 
@@ -499,7 +683,7 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
     // 沿x轴自左至右
     // 逐个条带计算重量以及条带底部的摩擦力和黏聚力。
     // 为防止out_of_range error, 最后一个条带不纳入计算
-    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
+    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
     {
         // 条带的滑移力和抗滑移力
         double sliceResistanceForce = 0;
@@ -576,6 +760,7 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
     return result;
 }
 
+// 毕晓普法
 double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     double prevFS = calculateFSOrdinary(slicesStratum, stratum);
@@ -587,7 +772,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
         double pushingForce = 0.0;
         double resistanceForce = 0.0;
 
-        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
+        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
         {
 
             // 条带的滑移力和抗滑移力
@@ -679,6 +864,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
     return prevFS;
 }
 
+// 简布法
 double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &stratum)
 {
     double prevFS = calculateFSOrdinary(slicesStratum, stratum);
@@ -724,7 +910,7 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
         double pushingForce = 0.0;
         double resistanceForce = 0.0;
 
-        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 2; sliceIdx++)
+        for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
         {
 
             // 条带的滑移力和抗滑移力

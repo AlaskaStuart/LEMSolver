@@ -11,7 +11,7 @@ if (MSVC)
 endif()
 
 # ===== 查找依赖 =====
-find_package(Eigen3 CONFIG REQUIRED)
+# find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # ===== 源文件 =====
@@ -25,8 +25,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         nlohmann_json::nlohmann_json
-        Eigen3::Eigen
 )
+# target_link_libraries(${PROJECT_NAME}
+#     PRIVATE
+#         nlohmann_json::nlohmann_json
+#         Eigen3::Eigen
+# )
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")

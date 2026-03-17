@@ -111,36 +111,36 @@ using PolyLineMap = std::map<std::tuple<int, int, int>, PolyLineCAD>;
 
 // --------------------函数声明----------------------
 
-Point2D operator+(const Point2D &a, const Point2D &b)
+inline Point2D operator+(const Point2D &a, const Point2D &b)
 {
     return {a[0] + b[0], a[1] + b[1]};
 }
 
-Point2D operator-(const Point2D &a, const Point2D &b)
+inline Point2D operator-(const Point2D &a, const Point2D &b)
 {
     return {a[0] - b[0], a[1] - b[1]};
 }
 
-Point2D operator*(const Point2D &v, double s)
+inline Point2D operator*(const Point2D &v, double s)
 {
     return {v[0] * s, v[1] * s};
 }
 
-double dot(const Point2D &a, const Point2D &b)
+inline double dot(const Point2D &a, const Point2D &b)
 {
     return a[0] * b[0] + a[1] * b[1];
 }
 
-double cross(const Point2D &a, const Point2D &b)
+inline double cross(const Point2D &a, const Point2D &b)
 {
     return a[0] * b[1] - a[1] * b[0];
 }
 
-double length(const Point2D &v)
+inline double length(const Point2D &v)
 {
     return std::sqrt(dot(v, v));
 }
-Point2D perp(const Point2D &v)
+inline Point2D perp(const Point2D &v)
 {
     return {-v[1], v[0]};
 }
