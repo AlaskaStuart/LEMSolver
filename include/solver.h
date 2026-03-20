@@ -52,11 +52,15 @@ public:
     // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
 
     void startAnalysis(std::string methodName = "Ordinary");
-    const SolverResult getResult() const { return buildResult(); };
+    SolverResult getResult() { return buildResult(); };
 
 private:
     SolverConfig cfg_;
     Slope slope_;
+
+    // 镜像
+    double mirrorX_;
+    Slope mediaSlope_;
 
     MultiPoints2D entryRange_;
     MultiPoints2D exitRange_;
@@ -72,7 +76,7 @@ private:
 
     void initialize();
 
-    SolverResult buildResult() const;
+    SolverResult buildResult();
 };
 
 #endif

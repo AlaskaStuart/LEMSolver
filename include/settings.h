@@ -23,7 +23,7 @@ struct SolverConfig
 {
     int entry_exit_points_num = 3;
     int slips_num = 1;
-    int slices_num = 10;
+    int slices_num = 2000;
 };
 
 #endif

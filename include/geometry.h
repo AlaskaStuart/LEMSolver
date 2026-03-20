@@ -36,4 +36,6 @@ PolyLineCAD toPolyLineCAD(const Point2D &A, const Point2D &B, const Point2D &cen
 // 从CAD多线段转化出两个点、圆心和半径，是否顺时针或者逆时针
 std::tuple<Point2D, Point2D, Point2D, double, bool> fromPolyLineCAD(const PolyLineCAD &P);
 
+MultiPoints2D mirrorMultiPoints2DAlongX(const MultiPoints2D &mPts, double mirrorX);
+
 #endif

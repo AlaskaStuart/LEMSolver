@@ -50,6 +50,7 @@ external/
 *.swp
 *.swo
 *~
+.vscode/
 
 # 文档
 doc/html/

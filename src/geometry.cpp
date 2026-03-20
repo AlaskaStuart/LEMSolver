@@ -598,3 +598,15 @@ std::tuple<Point2D, Point2D, Point2D, double, bool> fromPolyLineCAD(const PolyLi
 
     return std::make_tuple(polylineBeg, polylineEnd, center, radius, ccw);
 }
+
+MultiPoints2D mirrorMultiPoints2DAlongX(const MultiPoints2D &mPts, double mirrorX)
+{
+    MultiPoints2D result = mPts;
+    for (auto &pt : result)
+    {
+        pt[0] = -pt[0] + 2 * mirrorX;
+    }
+    std::reverse(result.begin(), result.end());
+
+    return result;
+}

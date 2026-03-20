@@ -1,5 +1,46 @@
 #include "algorithm.h"
 
+// 镜像slope
+std::pair<double, Slope> reverseSlope(const Slope &slope)
+{
+    Slope newSlope = slope;
+    Point2D leftSlpPt = newSlope.slope_shape.front();
+    Point2D rightSlpPt = newSlope.slope_shape.back();
+
+    double dir = rightSlpPt[1] - leftSlpPt[1];
+
+    // 镜像点
+    double mirrorAxes = std::nan("");
+
+    if (dir < 0)
+    {
+        mirrorAxes = leftSlpPt[0];
+
+        // slope_shape
+        newSlope.slope_shape = mirrorMultiPoints2DAlongX(newSlope.slope_shape, mirrorAxes);
+        // stratum
+        for (auto &strata : newSlope.stratum)
+        {
+            strata.strata_upper_bound = mirrorMultiPoints2DAlongX(strata.strata_upper_bound, mirrorAxes);
+            strata.strata_lower_bound = mirrorMultiPoints2DAlongX(strata.strata_lower_bound, mirrorAxes);
+        }
+
+        // fault
+        // fault不为空才进行镜像
+        if (!newSlope.fault.empty())
+        {
+            newSlope.fault = mirrorMultiPoints2DAlongX(newSlope.fault, mirrorAxes);
+        }
+        // water_level
+        // water_level不为空才进行镜像
+        if (!newSlope.water_level.empty())
+        {
+            newSlope.water_level = mirrorMultiPoints2DAlongX(newSlope.water_level, mirrorAxes);
+        }
+    }
+    return {mirrorAxes, newSlope};
+}
+
 // 设置破裂面的入口范围
 // 以边坡坡顶作为入口, 且入口范围长度不超过MAX_ENTRY_EXIT_LENGTH
 std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline)
@@ -188,7 +229,9 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
         // 情景1.1：断层、软弱层与边坡存在一个交点，返回复合型边坡，一半是断层、软弱层，一半是圆弧形
         // 情景1.2：断层、软弱层与边坡存在2个交点，返回为断层、软弱层
         // 情景1.3: 断层、软弱层与边坡不存在交点，返回为圆弧形滑面
-        // 检查一有2个交点：返回复合型滑面，有圆弧形-断层软弱层-圆弧组成的三段式滑面
+        // 检查一有2个交点：返回复合型滑面，由圆弧形-断层软弱层-圆弧组成的三段式滑面
+        // 情景2.2: 断层、软弱层与边坡存在两个交点，返回复合型滑面，由断层软弱层-圆弧-断层软弱层的三段式滑面
+        // 情景2.1和情景2.3: 返回复合型滑面，由圆弧形-断层软弱层-圆弧组成的三段式滑面
         // 检查一无交点：根据下一步的判断决定情况
         // 情景3.1: 断层、软弱层与边坡存在一个交点，返回圆弧形滑面
         // 情景3.2: 断层、软弱层与边坡存在两个交点，判断断层软弱层与圆弧形滑面的上下关系，谁在上面，则返回哪个
@@ -209,7 +252,7 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
             {
 
                 // 计算dir，边坡朝向
-                double dir = entryPoint[1] - exitPoint[1];
+                double dir = entryPoint[0] - exitPoint[0];
                 if (dir > 0)
                 {
                     // 边坡剖面右高左低
@@ -365,7 +408,17 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
             slipsMap[mapKey] = ithArcSlip;
         }
     }
-    return slipsMap;
+    // 去除重复值
+    PolyLineMap dedupedSlipsMap;
+    std::set<PolyLineCAD> seenSlips;
+    for (auto &slipPair : slipsMap)
+    {
+        if (seenSlips.insert(slipPair.second).second)
+        {
+            dedupedSlipsMap.emplace(slipPair.first, slipPair.second);
+        }
+    }
+    return dedupedSlipsMap;
 }
 
 // 每个索引的值为该{入口点, 出口点, 滑裂面}组合所对应的分割条带
@@ -641,7 +694,7 @@ CalcuInitArgs getInitArgs(const CustomMatrix &slicesStratum, std::vector<Strata>
 {
 
     int stratumSize = stratum.size();
-    const std::vector<double> &slicesX = slicesStratum.getRow(0);
+    std::vector<double> slicesX = slicesStratum.getRow(0);
 
     // 条带宽度
     double dx = slicesX[1] - slicesX[0];
@@ -703,9 +756,8 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
         // 计算条带底边的长度和倾角
         double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
-        double botLength = std::sqrt(botDy * botDy + dx * dx);
-        double botAngle = std::atan2(botDy, dx);
-
+        double botLength = sqrt(botDy * botDy + dx * dx);
+        double botAngle = atan(botDy / dx);
         // 计算条带的黏聚力、摩擦力和重力
 
         // 1.黏聚力
@@ -732,14 +784,14 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
             }
         }
         // 摩擦力
-        double sliceFriction = abs(sliceWeight * std::cos(botAngle) * std::tan(botStrataFrictionAngle));
+        double sliceFriction = abs(sliceWeight * cos(botAngle) * tan(botStrataFrictionAngle * PI / 180));
 
         // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
         // 摩擦力方向相反, 无推动力, 所有力参与抵抗
         if (botAngle * dir < 0)
         {
             // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
-            sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle));
+            sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * sin(botAngle));
         }
         // 摩擦力方向正常
         else
@@ -748,7 +800,7 @@ double calculateFSOrdinary(const CustomMatrix &slicesStratum, std::vector<Strata
             sliceResistanceForce = sliceCohesionForce + sliceFriction;
 
             // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
-            slicePushForce = sliceWeight * std::sin(botAngle);
+            slicePushForce = abs(sliceWeight * sin(botAngle));
         }
 
         resistanceForce += sliceResistanceForce;
@@ -794,7 +846,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
             double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
             // double botLength = std::sqrt(botDy * botDy + dx * dx);
-            double botAngle = std::atan2(botDy, dx);
+            double botAngle = atan(botDy / dx);
 
             // 计算条带的黏聚力、摩擦力和重力
 
@@ -823,10 +875,10 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
             }
 
             // 平衡方程中的抗滑力系数
-            double fa = abs(std::cos(botAngle)) + sin(botAngle) * std::tan(botStrataFrictionAngle) / prevFS;
+            double fa = abs(cos(botAngle)) + sin(botAngle) * tan(botStrataFrictionAngle * PI / 180) / prevFS;
 
             // 3. 摩擦力
-            double sliceFriction = sliceWeight * std::tan(botStrataFrictionAngle);
+            double sliceFriction = abs(sliceWeight * tan(botStrataFrictionAngle * PI / 180));
 
             // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
             // 摩擦力方向相反, 无推动力, 所有力参与抵抗
@@ -834,7 +886,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
             {
                 // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
                 // TODO: 这里该返回0还是继续
-                sliceResistanceForce = (sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle))) / fa;
+                sliceResistanceForce = (sliceCohesionForce + sliceFriction + abs(sliceWeight * sin(botAngle))) / fa;
             }
             // 摩擦力方向正常
             else
@@ -843,7 +895,7 @@ double calculateFSBishop(const CustomMatrix &slicesStratum, std::vector<Strata> 
                 sliceResistanceForce = (sliceCohesionForce + sliceFriction) / fa;
 
                 // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
-                slicePushForce = sliceWeight * std::sin(botAngle);
+                slicePushForce = abs(sliceWeight * sin(botAngle));
             }
 
             resistanceForce += sliceResistanceForce;
@@ -905,6 +957,33 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
     double chordLen = calculateLength(entryPoint, exitPoint);
     double maxChordToSlip = 0;
 
+    // 计算f0系数
+    double correctionB1 = 0.5;
+    double correctionF0 = 1;
+    for (int sliceIdx = 0; sliceIdx < slicesX.size() - 1; sliceIdx++)
+    {
+
+        const std::vector<double> &currentSlice = slicesStratum.getCol(sliceIdx);
+        const std::vector<double> &nextSlice = slicesStratum.getCol(sliceIdx + 1);
+
+        // 找到条带底部所属的地层
+        int currSliceBotIdx = getSliceBotIndex(currentSlice);
+        int nextSliceBotIdx = getSliceBotIndex(nextSlice);
+
+        // 计算条带底边的长度和倾角
+        double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
+
+        double botY = (nextSlice[nextSliceBotIdx] + currentSlice[currSliceBotIdx]) / 2;
+        Point2D ptBot = {slicesX[sliceIdx] + dx / 2, botY};
+
+        double chordToSlip = calculateDistToPolyline(ptBot, entryPoint, exitPoint).second;
+
+        maxChordToSlip = std::max(maxChordToSlip, chordToSlip);
+
+        double correctionDratioL = maxChordToSlip / chordLen;
+        correctionF0 = 1 + correctionB1 * (correctionDratioL - 1.4 * correctionDratioL * correctionDratioL);
+    }
+
     for (int iteration = 0; iteration < INTERATION_NUM; iteration++)
     {
         double pushingForce = 0.0;
@@ -931,15 +1010,8 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
             // 计算条带底边的长度和倾角
             double botDy = nextSlice[nextSliceBotIdx] - currentSlice[currSliceBotIdx];
 
-            double botY = (nextSlice[nextSliceBotIdx] + currentSlice[currSliceBotIdx]) / 2;
-            Point2D ptBot = {slicesX[sliceIdx] + dx / 2, botY};
-
-            double chordToSlip = calculateDistToPolyline(ptBot, entryPoint, exitPoint).second;
-
-            maxChordToSlip = std::max(maxChordToSlip, chordToSlip);
-
             // double botLength = std::sqrt(botDy * botDy + dx * dx);
-            double botAngle = std::atan2(botDy, dx);
+            double botAngle = atan(botDy / dx);
 
             // 计算条带的黏聚力、摩擦力和重力
 
@@ -967,11 +1039,9 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
                 }
             }
 
-            // 平衡方程中的抗滑力系数
-            double fa = (std::cos(botAngle) * std::cos(botAngle) * (1 + std::tan(botAngle) * std::tan(botStrataFrictionAngle))) / prevFS;
-
             // 3. 摩擦力
-            double sliceFriction = sliceWeight * std::tan(botStrataFrictionAngle);
+            double ma = abs(std::cos(botAngle) * (1 + 1 / prevFS * std::tan(botStrataFrictionAngle * PI / 180) * std::tan(botAngle)));
+            double sliceFriction = abs(tan(botStrataFrictionAngle * PI / 180) * (sliceWeight - abs(sin(botAngle) * sliceCohesionForce) / prevFS) / ma);
 
             // 若条带底部倾角与边坡倾向方向相反，则可确定为滑面前端倒角
             // 摩擦力方向相反, 无推动力, 所有力参与抵抗
@@ -979,25 +1049,21 @@ double calculateFSJanbu(const CustomMatrix &slicesStratum, std::vector<Strata> &
             {
                 // 条带的抵抗力 = 条带黏聚力 + 摩擦力 + 重力分量
                 // TODO: 这里该返回0还是继续
-                sliceResistanceForce = (sliceCohesionForce + sliceFriction + abs(sliceWeight * std::sin(botAngle))) / fa;
+                sliceResistanceForce = sliceCohesionForce + sliceFriction + abs(sliceWeight * std::tan(botAngle));
             }
             // 摩擦力方向正常
             else
             {
                 // 条带的抵抗力 = 条带黏聚力 + 摩擦力
-                sliceResistanceForce = (sliceCohesionForce + sliceFriction) / fa;
+                sliceResistanceForce = sliceCohesionForce + sliceFriction;
 
                 // 条带的推动力 = 条带重力在条带底部倾角方向上的分力
-                slicePushForce = sliceWeight * std::tan(botAngle);
+                slicePushForce = abs(sliceWeight * tan(botAngle));
             }
 
             resistanceForce += sliceResistanceForce;
             pushingForce += slicePushForce;
         }
-
-        double correctionB1 = 0.5;
-        double correctionDratioL = maxChordToSlip / chordLen;
-        double correctionF0 = 1 + correctionB1 * (correctionDratioL - 1.4 * correctionDratioL * correctionDratioL);
 
         double currFS = correctionF0 * resistanceForce / pushingForce;
         if (std::abs(currFS - prevFS) < EPSILON)

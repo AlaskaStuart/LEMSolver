@@ -7,8 +7,14 @@
 // step-5: 生成考虑了地层的切片
 void Solver::initialize()
 {
+    // 先判断边坡形态是左高右低还是右高左低
+    // 如果是左高右低，镜像翻转slope
+    std::pair<double, Slope> flippedSlope = reverseSlope(this->slope_);
+    this->mirrorX_ = flippedSlope.first;
+    this->mediaSlope_ = flippedSlope.second;
+
     // step-1: 确定破裂面的入口和出口位置
-    std::pair<MultiPoints2D, MultiPoints2D> entryExit = setEntryExitRange(this->slope_.slope_shape);
+    std::pair<MultiPoints2D, MultiPoints2D> entryExit = setEntryExitRange(this->mediaSlope_.slope_shape);
     this->entryRange_ = entryExit.first;
     this->exitRange_ = entryExit.second;
 
@@ -19,23 +25,22 @@ void Solver::initialize()
                                                 this->cfg_.entry_exit_points_num);
 
     // step-3: 生成滑面, 圆弧型或复合型
-    // TODO: 是应该软件自己判断是否采用复合滑面，还是说要暴露接口，让用户自行判断是否选择复合型滑面
     // 目前做法默认是复合型滑面，向下兼容圆弧形滑面
     // 如果存在软弱层/断层，先简单预处理，超出预处理的预设条件之外的其他情景，则退化为圆弧型滑面
     this->slipsSet_ = setSlips(this->entryPointsSet_,
                                this->exitPointsSet_,
                                this->cfg_.slips_num,
-                               this->slope_);
+                               this->mediaSlope_);
     // step-4: 生成切片
     this->slicesGeomSet_ = setSlicesGeom(this->entryPointsSet_,
                                          this->exitPointsSet_,
                                          this->slipsSet_,
-                                         this->slope_.slope_shape,
+                                         this->mediaSlope_.slope_shape,
                                          this->cfg_.slices_num);
 
     // step-5: 生成考虑了地层的切片
     this->slicesStratumSet_ = setSlicesStratum(this->slicesGeomSet_,
-                                               this->slope_);
+                                               this->mediaSlope_);
 }
 
 // step-6: 根据用户指定的算法计算安全系数
@@ -52,7 +57,7 @@ void Solver::startAnalysis(std::string methodName)
     std::map<std::tuple<int, int, int>, double> results;
 
     // 所需参数: 地层, 切片
-    std::vector<Strata> stratumList = this->slope_.stratum;
+    std::vector<Strata> stratumList = this->mediaSlope_.stratum;
     MatrixMap slicesStratumSet = this->slicesStratumSet_;
 
     // TODO: 多线程优化
@@ -71,9 +76,28 @@ void Solver::startAnalysis(std::string methodName)
 }
 
 // step-7: 返回计算结果
-SolverResult Solver::buildResult() const
+SolverResult Solver::buildResult()
 {
     SolverResult result;
+
+    // 如果mirrorX不是nan, 则反转结果
+    if (!std::isnan(this->mirrorX_))
+    {
+        // 如果之前镜像过, 这里再次镜像
+        // entryRange
+        this->entryRange_ = mirrorMultiPoints2DAlongX(this->entryRange_, this->mirrorX_);
+        this->exitRange_ = mirrorMultiPoints2DAlongX(this->exitRange_, this->mirrorX_);
+
+        this->entryPointsSet_ = mirrorMultiPoints2DAlongX(this->entryPointsSet_, this->mirrorX_);
+        this->exitPointsSet_ = mirrorMultiPoints2DAlongX(this->exitPointsSet_, this->mirrorX_);
+
+        // TODO
+        // 生成新的mapKey
+        // 镜像多线段
+        // 第一列镜像
+        // 第二列不变
+        // slips第三列如果不为空, 找到不为零的行, 将该值赋给上一行, 然后本行变为0
+    }
 
     result.entryRange = this->entryRange_;
     result.exitRange = this->exitRange_;

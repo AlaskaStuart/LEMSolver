@@ -13,7 +13,7 @@ struct CalcuInitArgs
     int stratumSize;
 
     // 条带的x坐标
-    const std::vector<double> &slicesX;
+    std::vector<double> slicesX;
 
     // 条带宽度
     double dx;
@@ -21,6 +21,8 @@ struct CalcuInitArgs
     // 判断边坡坡型方向
     double dir;
 };
+
+std::pair<double, Slope> reverseSlope(const Slope &slope);
 
 std::pair<MultiPoints2D, MultiPoints2D> setEntryExitRange(const MultiPoints2D &polyline);
 
