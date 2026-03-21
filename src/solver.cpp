@@ -43,6 +43,67 @@ void Solver::initialize()
                                                this->mediaSlope_);
 }
 
+// 根据情况反转结果
+void Solver::mirrorResult()
+{
+    // entryRange
+    this->entryRange_ = mirrorMultiPoints2DAlongX(this->entryRange_, this->mirrorX_);
+    this->exitRange_ = mirrorMultiPoints2DAlongX(this->exitRange_, this->mirrorX_);
+
+    this->entryPointsSet_ = mirrorMultiPoints2DAlongX(this->entryPointsSet_, this->mirrorX_);
+    this->exitPointsSet_ = mirrorMultiPoints2DAlongX(this->exitPointsSet_, this->mirrorX_);
+
+    PolyLineMap newSlipsSet;
+    // slicesGeomSet_只更新第一行
+    MatrixMap newSlicesGeomSet;
+
+    std::map<std::tuple<int, int, int>, double> newFactorOfSafety;
+    for (auto &slip : this->slipsSet_)
+    {
+        // 生成新的mapkey
+        std::tuple<int, int, int> originMapKey = slip.first;
+        int newEntryIdx = this->cfg_.entry_exit_points_num - 1 - std::get<0>(originMapKey);
+        int newExitIdx = this->cfg_.entry_exit_points_num - 1 - std::get<1>(originMapKey);
+        std::tuple<int, int, int> newMapKey = std::make_tuple(newEntryIdx, newExitIdx, std::get<2>(originMapKey));
+
+        // 镜像slip
+        PolyLineCAD originSlip = slip.second;
+        for (auto &pt : originSlip)
+        {
+            pt[0] = -pt[0] + 2 * this->mirrorX_;
+        }
+        std::reverse(originSlip.begin(), originSlip.end());
+        if (originSlip.size() > 1)
+        {
+            for (int ptIdx = 1; ptIdx < originSlip.size(); ptIdx++)
+            {
+                double curveVal = originSlip[ptIdx][2];
+                if (curveVal != 0)
+                {
+                    // 将曲率值赋给上一行
+                    originSlip[ptIdx - 1][2] = curveVal;
+                    originSlip[ptIdx][2] = 0;
+                }
+            }
+        }
+        // 镜像slices
+        CustomMatrix ithSlices = this->slicesGeomSet_[originMapKey];
+        for (int i = 0; i < ithSlices.cols(); i++)
+        {
+            ithSlices(0, i) = -ithSlices(0, i) + 2 * this->mirrorX_;
+        }
+        newSlipsSet[newMapKey] = originSlip;
+        newSlicesGeomSet[newMapKey] = ithSlices;
+        newFactorOfSafety[newMapKey] = this->factorOfSafety_[originMapKey];
+    }
+    // 更新slips
+    this->slipsSet_ = newSlipsSet;
+    // 更新slicesGeomSet
+    this->slicesGeomSet_ = newSlicesGeomSet;
+    // 更新factorOfSafety的mapkey
+    this->factorOfSafety_ = newFactorOfSafety;
+}
+
 // step-6: 根据用户指定的算法计算安全系数
 void Solver::startAnalysis(std::string methodName)
 {
@@ -73,39 +134,10 @@ void Solver::startAnalysis(std::string methodName)
     }
 
     this->factorOfSafety_ = results;
-}
 
-// step-7: 返回计算结果
-SolverResult Solver::buildResult()
-{
-    SolverResult result;
-
-    // 如果mirrorX不是nan, 则反转结果
+    // 如果左高右低: 镜像结果
     if (!std::isnan(this->mirrorX_))
     {
-        // 如果之前镜像过, 这里再次镜像
-        // entryRange
-        this->entryRange_ = mirrorMultiPoints2DAlongX(this->entryRange_, this->mirrorX_);
-        this->exitRange_ = mirrorMultiPoints2DAlongX(this->exitRange_, this->mirrorX_);
-
-        this->entryPointsSet_ = mirrorMultiPoints2DAlongX(this->entryPointsSet_, this->mirrorX_);
-        this->exitPointsSet_ = mirrorMultiPoints2DAlongX(this->exitPointsSet_, this->mirrorX_);
-
-        // TODO
-        // 生成新的mapKey
-        // 镜像多线段
-        // 第一列镜像
-        // 第二列不变
-        // slips第三列如果不为空, 找到不为零的行, 将该值赋给上一行, 然后本行变为0
+        mirrorResult();
     }
-
-    result.entryRange = this->entryRange_;
-    result.exitRange = this->exitRange_;
-    result.entryPointsSet = this->entryPointsSet_;
-    result.exitPointsSet = this->exitPointsSet_;
-    result.factorOfSafety = this->factorOfSafety_;
-    result.slipsSet = this->slipsSet_;
-    result.slicesGeomSet = this->slicesGeomSet_;
-
-    return result;
 }

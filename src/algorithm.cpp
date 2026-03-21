@@ -214,7 +214,7 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
         Point2D ithArcSlipCenter = {ithArcSlip[0][0], ithArcSlip[0][1]};
         double ithArcSlipRadius = ithArcSlip[0][2];
 
-        // 这里需要保左边点的横坐标要小于右边点的横坐标'
+        // 这里需要保左边点的横坐标要小于右边点的横坐标
         Point2D lPt = exitPoint;
         Point2D rPt = entryPoint;
         if (lPt[0] > rPt[0])
@@ -222,8 +222,8 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
             std::swap(lPt, rPt);
         }
 
-        // 先检查断层、软弱层与圆弧形滑面是否有交点
-        // 再检查断层、软弱层与边坡是否有交点
+        // 先检查断层、软弱层与圆弧形滑面是否有交点（检查一）
+        // 再检查断层、软弱层与边坡是否有交点（检查二）
         // 两次检查分别有三种情景：1个交叉点，2个交叉点，无交叉点
         // 检查一有1个交点：根据下一步的判断决定情况
         // 情景1.1：断层、软弱层与边坡存在一个交点，返回复合型边坡，一半是断层、软弱层，一半是圆弧形
@@ -440,7 +440,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
     // 生成slices的时候移除最后一个
     // 返回的结果是slicesNum+1个长度
     // 最后在计算安全系数时, 只考虑前slicesNum个条带,实际利用上的条带数量为sliceNum个
-    int matrixRow = slicesNum + 1;
+    int matrixCol = slicesNum + 1;
     for (auto &slip : slipsSet)
     {
         // 减少深拷贝，提升效率
@@ -448,7 +448,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
         const PolyLineCAD &ithslip = slip.second;
         // const std::vector<std::array<double, 3>> &ithslip = slip.second;
 
-        CustomMatrix ithMat(3, matrixRow);
+        CustomMatrix ithMat(3, matrixCol);
 
         int entryPtIdx = std::get<0>(mapKey);
         int exitPtIdx = std::get<1>(mapKey);
@@ -470,7 +470,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
             // 查看是否与坡型方向有关
             // 插值生成x
             // 入口点和出口点的x值进行插值
-            vectorX = interpolate(entryPoint[0], exitPoint[0], matrixRow + 1);
+            vectorX = interpolate(entryPoint[0], exitPoint[0], matrixCol + 1);
             double dx = vectorX[1] - vectorX[0];
 
             // 移除最后一个元素
@@ -519,7 +519,7 @@ MatrixMap setSlicesGeom(const MultiPoints2D &entryPointsSet,
             // 需要起始点和终止点
             double slipLeftX = std::get<0>(slipLeft);
             double slipRightX = std::get<0>(slipRight);
-            vectorX = interpolate(slipLeftX, slipRightX, matrixRow + 1);
+            vectorX = interpolate(slipLeftX, slipRightX, matrixCol + 1);
             double dx = vectorX[1] - vectorX[0];
             // 移除最后一个元素
             vectorX.pop_back();

@@ -51,6 +51,7 @@ external/
 *.swo
 *~
 .vscode/
+.vscode/*
 
 # 文档
 doc/html/

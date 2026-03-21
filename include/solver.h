@@ -1,7 +1,6 @@
 #ifndef LEMSOLVER_SLOVER_H
 #define LEMSOLVER_SLOVER_H
 
-// #include "utils.h"
 #include "model.h"
 #include "algorithm.h"
 #include "settings.h"
@@ -28,9 +27,9 @@ struct SolverResult
     MultiPoints2D exitRange;
     MultiPoints2D entryPointsSet;
     MultiPoints2D exitPointsSet;
-    std::map<std::tuple<int, int, int>, double> factorOfSafety;
     PolyLineMap slipsSet;
     MatrixMap slicesGeomSet;
+    std::map<std::tuple<int, int, int>, double> factorOfSafety;
 };
 
 class Solver
@@ -42,24 +41,32 @@ public:
         initialize();
     };
 
-    // 方便画图
+    void startAnalysis(std::string methodName = "Ordinary");
+
     const MultiPoints2D &getEntryRange() const { return entryRange_; };
     const MultiPoints2D &getExitRange() const { return exitRange_; };
     const MultiPoints2D &getEntryPointsSet() const { return entryPointsSet_; };
     const MultiPoints2D &getExitPointsSet() const { return exitPointsSet_; };
-    // CustomMatrix getArcSlipsSet() const { return slipsSet_; };
-    // CustomMatrix getSlicesGeosSet() const { return slicesGeosSet_; };
-    // CustomMatrix getSlicesStratumSet() const { return slicesStratumSet_; };
-
-    void startAnalysis(std::string methodName = "Ordinary");
-    SolverResult getResult() { return buildResult(); };
+    SolverResult getResult() const
+    {
+        return SolverResult{
+            entryRange_,
+            exitRange_,
+            entryPointsSet_,
+            exitPointsSet_,
+            slipsSet_,
+            slicesGeomSet_,
+            factorOfSafety_,
+        };
+    };
 
 private:
     SolverConfig cfg_;
     Slope slope_;
 
-    // 镜像
+    // 镜像对称轴
     double mirrorX_;
+    // 计算使用
     Slope mediaSlope_;
 
     MultiPoints2D entryRange_;
@@ -75,8 +82,7 @@ private:
     std::map<std::tuple<int, int, int>, double> factorOfSafety_;
 
     void initialize();
-
-    SolverResult buildResult();
+    void mirrorResult();
 };
 
 #endif

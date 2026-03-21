@@ -8,7 +8,7 @@ int main()
     clock_t start, end;
     start = clock();
     // 第一步, 读取json剖面文件
-    std::string jsonfilename = "./data/section-Nor-scene00.json";
+    std::string jsonfilename = "./data/section-Nor-scene20.json";
     // json文件生成边坡数据结构体
     Slope slpDemo = readSlopeFromJson(jsonfilename);
 
@@ -18,7 +18,7 @@ int main()
 
     // 第三步, 开始计算
     // 如果不专门设置参数, 默认使用的是瑞典条分法
-    solverDemo.startAnalysis("Bishop");
+    solverDemo.startAnalysis();
 
     // 第四步, 获取计算结果
     // 包括可视化交互的要素和相应的安全系数结果
