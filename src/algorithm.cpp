@@ -230,8 +230,9 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
         // 情景1.2：断层、软弱层与边坡存在2个交点，返回为断层、软弱层
         // 情景1.3: 断层、软弱层与边坡不存在交点，返回为圆弧形滑面
         // 检查一有2个交点：返回复合型滑面，由圆弧形-断层软弱层-圆弧组成的三段式滑面
+        // 情景2.1: 返回圆弧形滑面
         // 情景2.2: 断层、软弱层与边坡存在两个交点，返回复合型滑面，由断层软弱层-圆弧-断层软弱层的三段式滑面
-        // 情景2.1和情景2.3: 返回复合型滑面，由圆弧形-断层软弱层-圆弧组成的三段式滑面
+        // 情景2.3: 返回复合型滑面，由圆弧形-断层软弱层-圆弧组成的三段式滑面
         // 检查一无交点：根据下一步的判断决定情况
         // 情景3.1: 断层、软弱层与边坡存在一个交点，返回圆弧形滑面
         // 情景3.2: 断层、软弱层与边坡存在两个交点，判断断层软弱层与圆弧形滑面的上下关系，谁在上面，则返回哪个
@@ -350,7 +351,12 @@ PolyLineMap setSlips(const MultiPoints2D &entryPointsSet,
 
                 ithSlip.insert(ithSlip.end(), polylinePart2CAD.begin(), polylinePart2CAD.end());
             }
-            // 情景2.1 情景2.3 和其他情况
+            // 情景2.1 和其他情况
+            else if (faultAndSlopeIntersection.size() == 1)
+            {
+                slipsMap[mapKey] = ithArcSlip;
+            }
+            // 情景2.3
             else
             {
                 // 第一个交点左侧，圆弧段
@@ -670,6 +676,15 @@ MatrixMap setSlicesStratum(const MatrixMap &slicesMap,
                 //     ithStrataTopVect.push_back(topVal);
                 //     ithStrataBotVect.push_back(botVal);
                 // }
+
+                // 特殊情景
+                // ithSliceStrataYTop == ithSliceYbot
+                // 为了取得弱层的c和phi
+                else if (abs(ithSliceStrataYtop - ithSliceYbot) <= EPSILON)
+                {
+                    ithStrataTopVect.push_back(ithSliceStrataYtop);
+                    ithStrataBotVect.push_back(ithSliceStrataYtop);
+                }
                 else
                 {
                     double topVal = std::min(ithSliceYtop, ithSliceStrataYtop);
